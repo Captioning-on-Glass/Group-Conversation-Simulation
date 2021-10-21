@@ -1,11 +1,29 @@
 import os
 import random
-import threading
+import time
+from dataclasses import dataclass
 from typing import List
 
 import cv2
+import vlc
 
 from whole_captions import CAPTIONS
+
+
+class VLCWrapper:
+    def __init__(self, instance: vlc.Instance, juror_id: str) -> None:
+        self.juror_id = juror_id
+        self.instance: vlc.Instance = instance
+        self.media_list: vlc.MediaList = self.instance.media_list_new()
+        self.media_player: vlc.MediaListPlayer = self.instance.media_list_player_new()
+        self.media_player.set_media_list(self.media_list)
+
+    def add_video(self, path: str) -> None:
+        """
+        Adds a video to the media list.
+        """
+        self.media_list.add_media(self.instance.media_new(path))
+
 
 VIDEO_DIRECTORY = "videos"
 JUROR_A_IDLE_VIDEOS = os.path.join(VIDEO_DIRECTORY, "idle", "juror-a")
@@ -19,11 +37,10 @@ JUROR_TO_IDLE_VIDEOS = {
     "juror-c": JUROR_C_IDLE_VIDEOS,
     "jury-foreman": JURY_FOREMAN_IDLE_VIDEOS,
 }
-WINDOW_TITLES = ["Juror A", "Juror B", "Juror C", "Jury Foreman"]
+JUROR_IDS = ["juror-a", "juror-b", "juror-c", "jury-foreman"]
 
-JUROR_TO_INDEX = {"juror-a": 0, "juror-b": 1, "juror-c": 2, "jury-foreman": 3}
-
-INDEX_TO_JUROR = {value: key for key, value in JUROR_TO_INDEX.items()}
+JUROR_TO_INDEX = {juror_id: i for i, juror_id in enumerate(JUROR_IDS)}
+INDEX_TO_JUROR = {i: juror_id for i, juror_id in enumerate(JUROR_IDS)}
 
 
 def get_random_video_from_directory(video_directory: str) -> str:
@@ -36,7 +53,7 @@ def get_active_video_from_index(index: int) -> str:
 
 def play_videos():
     counter = 0
-    current_caption_info = CAPTIONS[counter]
+    speaker_ids = [caption["id"] for caption in CAPTIONS]
     initial_video_paths: List[str] = [
         get_random_video_from_directory(JUROR_A_IDLE_VIDEOS),
         get_random_video_from_directory(JUROR_B_IDLE_VIDEOS),
@@ -44,63 +61,38 @@ def play_videos():
         os.path.join(VIDEO_DIRECTORY, f"{counter + 1}.mp4"),
     ]
 
-    playing_videos = [
-        cv2.VideoCapture(video_path) for video_path in initial_video_paths
+    juror_vlc_instances: List[VLCWrapper] = [
+        VLCWrapper(vlc.Instance(), juror_id) for juror_id in JUROR_IDS
     ]
 
-    frames = [None] * len(initial_video_paths)
-    ret = [None] * len(initial_video_paths)
-    print(current_caption_info["text"])
+    for initial_video_path, juror_vlc_instance in zip(
+        initial_video_paths, juror_vlc_instances
+    ):
+        juror_vlc_instance.add_video(initial_video_path)
+        juror_vlc_instance.media_player.play()
+
+    counter = 0
     while True:
-        for i, video in enumerate(playing_videos):
-            if video is not None:
-                is_playing, frame = video.read()
-                ret[i] = is_playing
-                frames[i] = frame
-                if not is_playing:
-                    juror = INDEX_TO_JUROR[i]
-                    # Replace active speaker's current video with an idle video.
-                    random_idle_video_path = get_random_video_from_directory(
-                        JUROR_TO_IDLE_VIDEOS[juror]
-                    )
-                    video.release()
-                    playing_videos[i] = cv2.VideoCapture(random_idle_video_path)
+        for vlc_instance in juror_vlc_instances:
+            if vlc_instance.media_player.is_playing():
+                continue
 
-                    # Active speaker video has finished playing
-                    if current_caption_info["id"] == juror:
-                        # Swapping next speaker's idle video out with an active one.
-                        counter += 1
-                        if counter >= len(CAPTIONS):
-                            break
-                        current_caption_info = CAPTIONS[counter]
-                        new_speaker_id = current_caption_info["id"]
-                        new_speaker_index = JUROR_TO_INDEX[new_speaker_id]
+            # This video has stopped playing! We need to replace the video with an idle video.
+            vlc_instance.add_video(
+                get_random_video_from_directory(
+                    JUROR_TO_IDLE_VIDEOS[vlc_instance.juror_id]
+                )
+            )
+            vlc_instance.media_player.next()
+            if vlc_instance.juror_id == speaker_ids[counter]:
+                counter += 1
+                next_juror_id = speaker_ids[counter]
+                next_juror_vlc_instance_idx = JUROR_TO_INDEX[next_juror_id]
+                juror_vlc_instances[next_juror_vlc_instance_idx].add_video(
+                    get_active_video_from_index(counter)
+                )
+                juror_vlc_instances[next_juror_vlc_instance_idx].media_player.next()
 
-                        # The speaker we're about to switch to is currently playing an idle video, let's release that video from memory
-                        new_speaker_idle_video = playing_videos[new_speaker_index]
-                        new_speaker_idle_video.release()
 
-                        # Now let's replace that video with the active video.
-                        new_speaker_active_video_path = get_active_video_from_index(
-                            counter
-                        )
-                        new_speaker_active_video = cv2.VideoCapture(
-                            new_speaker_active_video_path
-                        )
-                        playing_videos[new_speaker_index] = new_speaker_active_video
-
-                        # Debugging print statement
-                        print(current_caption_info["text"])
-
-        for i, f in enumerate(frames):
-            if ret[i] is True:
-                cv2.imshow(WINDOW_TITLES[i], f)
-
-        if cv2.waitKey(16) & 0xFF == ord("q"):
-            break
-
-    for video in playing_videos:
-        if video is not None:
-            video.release()
-
-    cv2.destroyAllWindows()
+if __name__ == "__main__":
+    play_videos()
