@@ -1,21 +1,21 @@
+import argparse
+import datetime
 import json
 import logging
 import multiprocessing
-import time
-import datetime
 import random
 import socket
-import argparse
-from typing import Any, Callable, Dict, List, Literal, Optional
+import time
+from typing import Any, Callable, Dict, List, Literal, NewType, Optional
 
+import qrcode
 import rx
+import serial
+import serial.tools.list_ports
+import vlc
 from rx import operators as ops
 from rx.core.typing import Observable, Observer, Scheduler
 from rx.scheduler.threadpoolscheduler import ThreadPoolScheduler
-import vlc
-import qrcode
-import serial
-import serial.tools.list_ports
 
 import segmented_captions
 from common import BYTEORDER, HEADER_SIZE, PORT
@@ -27,18 +27,17 @@ DEFAULT_RENDERING_METHOD = 1
 
 logging.basicConfig(level=logging.INFO)
 
-random_juror: Callable[
-    [], Literal["juror-a", "juror-b", "juror-c", "jury-foreman", None]
-] = lambda: random.choice(["juror-a", "juror-b", "juror-c", "jury-foreman", None])
+JurorId = Literal["juror-a", "juror-b", "juror-c", "jury-foreman", None]
 
 
 def create_message(
-    caption: Dict[str, str], juror_being_looked_at: Optional[str]
+    caption: Dict[str, str], juror_being_looked_at: JurorId
 ) -> Dict[str, str]:
     logging.debug(f"juror={juror_being_looked_at}, caption['id']={caption['id']}")
     message = {
-        "text": caption["text"] if juror_being_looked_at == caption["id"] else "CLEAR",
-        "id": caption["id"],
+        "text": caption["text"],
+        "speaker_id": caption["id"],
+        "focused_id": juror_being_looked_at,
     }
     logging.debug(f"message={message}")
     return message
@@ -60,10 +59,12 @@ def socket_transmission(message: Dict[str, str], connection: socket.socket) -> N
     logging.debug(f"Socket transmission completed.")
 
 
-def mock_serial_monitor(observer: Observer, scheduler: Scheduler):
+def mock_serial_monitor(observer: Observer, scheduler: Scheduler) -> None:
     while True:
         time.sleep((random.random() * 4) + 0.5)
-        observer.on_next(random_juror())
+        observer.on_next(
+            random.choice(["juror-a", "juror-b", "juror-c", "jury-foreman", None])
+        )
 
 
 def serial_monitor(
@@ -171,16 +172,12 @@ def main(host: str, port: int, rendering_method: int, for_testing: bool) -> None
         selected_serial_port = select_serial_port()
         configured_serial_monitor = serial_monitor(selected_serial_port)
 
-    # logging.debug("Loading VLC videos")
-    # players: List[vlc.MediaPlayer] = []
-    # for i in range(3):  # range(NUM_JURORS):
-    #     players.append(load_video_in_vlc(os.path.join("videos", f"{i+1}.mp4")))
     captions_observable: Observable = rx.concat_with_iterable(
         build_delayed_caption_obs(caption) for caption in segmented_captions.CAPTIONS
     )
-    serial_monitor_observable = rx.create(configured_serial_monitor).pipe(
-        ops.subscribe_on(scheduler), ops.distinct_until_changed()
-    )
+    serial_monitor_observable: Observable[JurorId] = rx.create(
+        configured_serial_monitor
+    ).pipe(ops.subscribe_on(scheduler), ops.distinct_until_changed())
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((host, port))
@@ -188,17 +185,11 @@ def main(host: str, port: int, rendering_method: int, for_testing: bool) -> None
         render_connection_qrcode(get_ip(), port, rendering_method=rendering_method)
         conn, addr = sock.accept()
         logging.info(f"Socket connection received from: {addr[0]}:{addr[1]}")
-        # for player in players:
-        #     player.play()
-        #     player.set_pause(1)
         ready = input("Press ENTER to begin the experiment.")
         while ready != EXPECTED_CHARACTER:
             ready = input(
                 "Invalid character received. Press ENTER to begin the experiment."
             )
-        # for player in players:
-        #     player.set_pause(0)
-        # time.sleep(1000)
         messages_observable = rx.combine_latest(
             captions_observable,
             serial_monitor_observable,
