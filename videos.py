@@ -1,10 +1,7 @@
 import os
 import random
-import time
-from dataclasses import dataclass
 from typing import List
 
-import cv2
 import vlc
 
 from whole_captions import CAPTIONS
@@ -70,29 +67,3 @@ def play_videos():
     ):
         juror_vlc_instance.add_video(initial_video_path)
         juror_vlc_instance.media_player.play()
-
-    counter = 0
-    while True:
-        for vlc_instance in juror_vlc_instances:
-            if vlc_instance.media_player.is_playing():
-                continue
-
-            # This video has stopped playing! We need to replace the video with an idle video.
-            vlc_instance.add_video(
-                get_random_video_from_directory(
-                    JUROR_TO_IDLE_VIDEOS[vlc_instance.juror_id]
-                )
-            )
-            vlc_instance.media_player.next()
-            if vlc_instance.juror_id == speaker_ids[counter]:
-                counter += 1
-                next_juror_id = speaker_ids[counter]
-                next_juror_vlc_instance_idx = JUROR_TO_INDEX[next_juror_id]
-                juror_vlc_instances[next_juror_vlc_instance_idx].add_video(
-                    get_active_video_from_index(counter)
-                )
-                juror_vlc_instances[next_juror_vlc_instance_idx].media_player.next()
-
-
-if __name__ == "__main__":
-    play_videos()
