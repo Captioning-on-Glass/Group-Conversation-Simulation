@@ -12,15 +12,9 @@
 
 #include <SDL.h>
 #include <SDL_mutex.h>
-#include <SDL_ttf.h>
 #include <SDL_image.h>
 
 #define PORT 65432
-
-
-#define FONT_SIZE_SMALL 26
-#define FONT_SIZE_MEDIUM 26
-#define FONT_SIZE_LARGE 28
 
 #define WINDOW_TITLE "Four Angry Men"
 
@@ -31,7 +25,6 @@
 
 #define WINDOW_OFFSET_X 83 // ASSUMING 3840x2160 DISPLAY
 #define WINDOW_OFFSET_Y 292
-
 
 /**
  * This function is called prior to VLC rendering a video frame.
@@ -70,9 +63,6 @@ static void unlock(void *data, [[maybe_unused]] void *id, [[maybe_unused]] void 
             // Non-registered graphics follow the user's head orientation around the screen
             render_nonregistered_captions(app_context);
             break;
-        case NONREGISTERED_GRAPHICS_WITH_ARROWS:
-            render_nonregistered_captions_with_indicators(app_context);
-            break;
         case CONTROL:
             break;
         default:
@@ -109,14 +99,12 @@ int main(int argc, char *argv[]) {
     [
     video_section, // Which video section will we be rendering?
     presentation_method, // How will we be presenting captions?
-    foreground_color, // What color will the text be? RGBA format
-    background_color, // What color will the background behind the text be? RGBA format
-    path_to_font, // Where's the smallest_font located?
-    font_size // How big will the smallest_font be?
+    blur_level // How much blur will we be applying to our captions?
     ] = parse_arguments(argc, argv);
 
     std::cout << "Using presentation method: " << presentation_method << std::endl;
     std::cout << "Playing video section: " << video_section << std::endl;
+    std::cout << "Using blur level: " << blur_level << std::endl;
 
     // Print the address of this server, and which presentation method we're going to be using.
     // This QR code will be scanned by the HWD so that it can connect to our server.
@@ -142,35 +130,11 @@ int main(int argc, char *argv[]) {
     // For non-registered captions, render them at 75% of the window's height.
     app_context.y = app_context.window_height * 0.75;
 
-    // Let's load the foreground and background colors.
-    app_context.foreground_color = &foreground_color;
-    app_context.background_color = &background_color;
-
     // Let's initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
         return 1;
     }
-    // And initialize SDL_ttf, which will render text on our video frames.
-    if (TTF_Init() == -1) {
-        printf("[ERROR] TTF_Init() Failed with: %s\n", TTF_GetError());
-        exit(2);
-    }
-
-    TTF_Font *smallest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_SMALL);
-    TTF_Font *medium_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_MEDIUM);
-    TTF_Font *largest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_LARGE);
-    app_context.smallest_font = smallest_font;
-    app_context.medium_font = medium_font;
-    app_context.largest_font = largest_font;
-    const std::map<cog::Juror, TTF_Font *> juror_font_sizes{
-            {cog::Juror_JurorA,      medium_font},
-            {cog::Juror_JurorB,      medium_font},
-            {cog::Juror_JuryForeman, medium_font},
-            {cog::Juror_JurorC,      medium_font}
-    };
-    app_context.juror_font_sizes = &juror_font_sizes;
-
 
     // Lastly, let's initialize SDL_image, which will load images for us.
     auto flags = IMG_INIT_PNG;
@@ -207,22 +171,6 @@ int main(int argc, char *argv[]) {
     }
     app_context.mutex = SDL_CreateMutex();
 
-    // Load the two indicator images that we'll use to point towards the next speaker.
-    std::string back_arrow_path = "resources/images/arrow_back.png";
-    std::string forward_arrow_path = "resources/images/arrow_forward.png";
-    SDL_Surface *back_arrow = IMG_Load(back_arrow_path.c_str());
-    if (!back_arrow) {
-        printf("IMG_Load: %s\n", IMG_GetError());
-        exit(EXIT_FAILURE);
-    }
-    SDL_Surface *forward_arrow = IMG_Load(forward_arrow_path.c_str());
-    if (!forward_arrow) {
-        printf("IMG_Load: %s\n", IMG_GetError());
-        exit(EXIT_FAILURE);
-    }
-    app_context.back_arrow = back_arrow;
-    app_context.forward_arrow = forward_arrow;
-
     // Now that we've configured our app context, let's get ready to boot up VLC.
     libvlc_instance_t *libvlc;
     libvlc_media_t *m;
@@ -242,9 +190,29 @@ int main(int argc, char *argv[]) {
         printf("LibVLC initialization failure. If on MacOS, make sure that VLC_PLUGIN_PATH is set to the path of the PARENT of the VLC plugin folder");
         return EXIT_FAILURE;
     }
-
-    // Let's load the video that we're going to play on VLC
     std::ostringstream os;
+
+    nlohmann::json json;
+    os << "resources/captions/merged_captions." << video_section << ".json";
+    std::string captions_path = os.str();
+    std::cout << "Captions path = " << captions_path << std::endl;
+    std::ifstream captions_file(captions_path.c_str());
+    captions_file >> json;
+    std::vector<cog::Juror> speaker_ids;
+    for (const auto &entry: json) {
+        const auto speaker_id_str = entry["speaker_id"].get<std::string>();
+        auto speaker_id = juror_from_string(speaker_id_str);
+        speaker_ids.emplace_back(speaker_id);
+    }
+    std::string path_to_bmps = "resources/bmp/" + std::to_string(video_section);
+    std::cout << "Path to bmps = " << path_to_bmps << std::endl;
+    auto caption_model = CaptionModel(app_context.renderer, path_to_bmps, speaker_ids,
+                                      blur_level);
+    app_context.caption_model = &caption_model;
+
+    os.str("");
+    os.clear();
+    // Let's load the video that we're going to play on VLC
     os << "resources/videos/main." << video_section << ".mp4";
     std::string video_path = os.str();
     m = libvlc_media_new_path(libvlc, video_path.c_str());
@@ -261,17 +229,6 @@ int main(int argc, char *argv[]) {
     std::mutex socket_mutex;
     std::thread read_orientation_thread(read_orientation, socket, &cliaddr, &socket_mutex, &azimuth_mutex,
                                         &azimuth_buffer);
-
-    nlohmann::json json;
-    os.str("");
-    os.clear();
-    os << "resources/captions/merged_captions." << video_section << ".json";
-    std::string captions_path = os.str();
-    std::cout << "Captions path = " << captions_path << std::endl;
-    std::ifstream captions_file(captions_path.c_str());
-    captions_file >> json;
-    auto caption_model = CaptionModel();
-    app_context.caption_model = &caption_model;
 
     // Wait for data to start getting transmitted from the phone
     // before we start playing our video on VLC and rendering captions.
@@ -315,12 +272,6 @@ int main(int argc, char *argv[]) {
             case SDLK_q:
                 done = true;
                 break;
-            case SDLK_DOWN:
-                app_context.y += 100;
-                break;
-            case SDLK_UP:
-                app_context.y -= 100;
-                break;
             case SDLK_SPACE:
                 if (!started) {
                     started = true;
@@ -333,12 +284,10 @@ int main(int argc, char *argv[]) {
 
         SDL_Delay(1000 / 10);
     }
-    TTF_CloseFont(smallest_font);
     SDL_DestroyMutex(app_context.mutex);
     SDL_DestroyRenderer(app_context.renderer);
     SDL_DestroyWindow(window);
     IMG_Quit();
-    TTF_Quit();
     SDL_Quit();
     return 0;
 }

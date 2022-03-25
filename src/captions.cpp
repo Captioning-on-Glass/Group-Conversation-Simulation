@@ -1,55 +1,35 @@
 #include <thread>
 #include <iostream>
+#include <filesystem>
+#include <SDL_image.h>
 #include "captions.hpp"
 
-std::string CaptionModel::wrap(const std::string &text, const int line_length) {
-    std::istringstream words(text);
-    std::vector<std::string> wrapped_lines;
-    std::string word;
+CaptionModel::CaptionModel(SDL_Renderer *renderer, const std::string &path_to_bitmaps,
+                           const std::vector<cog::Juror> &speaker_ids, const int blur_level) {
+    // Written on a plane w/o wifi, this can be done more cleanly.
 
-    if (words >> word) {
-        wrapped_lines.emplace_back(word);
-        size_t space_left = line_length - word.length();
-        while (words >> word) {
-            if (space_left < word.length() + 1) {
-                wrapped_lines.emplace_back(word);
-                space_left = line_length - word.length();
-            } else {
-                wrapped_lines.back() += ' ' + word;
-                space_left -= word.length() + 1;
-            }
+    for (auto i = 0; i < speaker_ids.size(); ++i) {
+        const std::string filepath =
+                path_to_bitmaps + "/" + std::to_string(i) + "." + std::to_string(blur_level) + ".png";
+        if (!std::filesystem::exists(filepath)) {
+            break;
         }
+        this->captions.emplace_back(IMG_Load(filepath.c_str()), speaker_ids.at(i));
     }
-    if (wrapped_lines.empty()) {
-        return "";
-    }
-    if (wrapped_lines.size() == 1) {
-        return wrapped_lines.back();
-    }
-    return wrapped_lines.at(wrapped_lines.size() - 2) + '\n' + wrapped_lines.at(wrapped_lines.size() - 1);
 }
 
-void CaptionModel::add_word(const std::string &new_word, cog::Juror speaker) {
-    text_mutex.lock();
-    if (!spoken_so_far.empty() && spoken_so_far.back().first != speaker) {
-        spoken_so_far.clear();
+CaptionModel::~CaptionModel() {
+    for (auto [surface, juror] : this->captions) {
+        SDL_FreeSurface(surface);
     }
-    spoken_so_far.emplace_back(speaker, new_word);
-    text_mutex.unlock();
 }
 
-std::pair<cog::Juror, std::string> CaptionModel::get_current_text(const int line_length) {
-    std::string current_speech;
-    cog::Juror current_juror = cog::Juror_JuryForeman;
-    text_mutex.lock();
-    if (!spoken_so_far.empty()) {
-        current_juror = spoken_so_far.front().first;
-        for (const auto&[_, word]: spoken_so_far) {
-            current_speech += word + " ";
-        }
-    }
-    text_mutex.unlock();
-    return std::make_pair(current_juror, wrap(current_speech, line_length));
+void CaptionModel::increment() {
+    this->idx++;
+}
+
+std::pair<SDL_Surface*, cog::Juror> CaptionModel::get_current_caption() {
+    return this->captions.at(this->idx);
 }
 
 cog::Juror juror_from_string(const std::string &juror_str) {
@@ -107,6 +87,6 @@ start_caption_stream(const bool *started, int socket, sockaddr_in *client_addres
         auto focused_id = cog::Juror_JuryForeman;
         std::this_thread::sleep_for(std::chrono::duration<double, std::ratio<1, 1000>>(delay));
 //        transmit_caption(socket, client_address, socket_mutex, text, speaker_id, focused_id, message_id, chunk_id);
-        model->add_word(text, speaker_id);
+        model->increment();
     }
 }

@@ -41,70 +41,28 @@ render_text(SDL_Renderer *renderer, TTF_Font *font, const std::string &text, int
 
 void render_nonregistered_captions(const AppContext *context) {
     auto left_x = calculate_display_x_from_orientation(context);
-    auto[juror, text] = context->caption_model->get_current_text();
-    if (text.empty()) {
-        return;
-    }
-    render_text(context->renderer, context->medium_font, text, left_x, context->y, context->foreground_color,
-                context->background_color);
-}
-
-
-void render_nonregistered_captions_with_indicators(const AppContext *context) {
-    auto left_x = calculate_display_x_from_orientation(context);
-    auto[juror, text] = context->caption_model->get_current_text();
-    if (text.empty()) {
-        return;
-    }
-    const auto[text_width, text_height] = render_text(context->renderer,
-                                                      context->medium_font, text, left_x, context->y,
-                                                      context->foreground_color, context->background_color);
-    bool should_show_back_arrow = false;
-    bool should_show_forward_arrow = true;
-
-    if (!(should_show_forward_arrow || should_show_back_arrow)) {
-        return;
-    }
-    int x = 0;
-    SDL_Surface *arrow_surface = nullptr;
-    if (should_show_back_arrow) {
-        arrow_surface = context->back_arrow;
-        x = left_x - arrow_surface->w;
-    } else if (should_show_forward_arrow) {
-        arrow_surface = context->forward_arrow;
-        x = left_x + text_width;
-    }
-    auto destination_rect = SDL_Rect{x, context->y, arrow_surface->w, arrow_surface->h};
-    render_surface_as_texture(context->renderer, arrow_surface, nullptr, &destination_rect);
+    auto[caption_surface, juror] = context->caption_model->get_current_caption();
+    auto destination_rect = SDL_Rect{static_cast<int>(left_x), context->y, caption_surface->w, caption_surface->h};
+    render_surface_as_texture(context->renderer, caption_surface, nullptr,
+                              &destination_rect);
 }
 
 void render_registered_captions(const AppContext *context) {
-    const auto[juror, text] = context->caption_model->get_current_text();
-    if (text.empty()) {
-        return;
-    }
+    const auto[caption_surface, juror] = context->caption_model->get_current_caption();
+
     // We've previously identified where on the screen to place the captions underneath the jurors. Those are represented as percentages of the VLC surface fov_x_2/height
     auto[left_x_percent, left_y_percent] = context->juror_positions->at(juror);
     // Now we just re-hydrate those values with the current size of the VLC surface to get where the captions should be positioned.
     int text_x = left_x_percent * context->display_rect.w;
     int text_y = left_y_percent * context->display_rect.h;
-    // Retrieve the font to be used for the current juror
-    auto font = context->juror_font_sizes->at(juror);
-    // And let's create a surface of the text we've been given.
-
-    auto text_surface = TTF_RenderText_Shaded_Wrapped(font, text.c_str(), *context->foreground_color,
-                                                      *context->background_color,
-                                                      WRAP_LENGTH);
-//    SDL_Rect rect = {text_x, text_y, text_surface->w, text_surface->h};
-//    render_surface_as_texture(context->renderer, text_surface, nullptr, &rect);
-//    return;
 
     // Now, here's where we do our clipping behavior.
     // The general idea is as follows:
     //
     // The text surface has a width and height, and we know the text_x and text_y of where we're going to draw the
+
     // caption (assuming no clipping at all).
-    const auto surface_rect = SDL_Rect{text_x, text_y, text_surface->w, text_surface->h};
+    const auto surface_rect = SDL_Rect{text_x, text_y, caption_surface->w, caption_surface->h};
 
     // We also have a pre-defined field-of-view (FOV), which is how much the person would be able to see if they were
     // wearing a realistic HWD.
@@ -127,12 +85,11 @@ void render_registered_captions(const AppContext *context) {
 //    SDL_RenderDrawLine(context->renderer, azimuth_x, 0, azimuth_x, context->window_height);
 
     // and then find the intersection between the FOV region (which extends from the top to the bottom of the window, to
-    // keep things easy) and the text surface rectangle, which should give us a rectangle indicating what part of the
+    // keep things easy) and the caption_surface surface rectangle, which should give us a rectangle indicating what part of the
     // caption should be rendered.
     auto intersection = rectangle_intersection(&surface_rect, &fov_region);
     // If they don't intersect at all, there's nothing to render, we stop here.
     if (!intersection.has_value()) {
-        SDL_FreeSurface(text_surface);
         return;
     }
     SDL_Rect intersection_rect = intersection.value();
@@ -144,13 +101,12 @@ void render_registered_captions(const AppContext *context) {
     SDL_Rect text_surface_clip_region = {
             intersection_rect.x - text_x, // This won't ever be negative, because intersection_x >= text_x always
             intersection_rect.y - text_y, // Same here
-            intersection_rect.w, // And this is how much of the text surface we want to clip
+            intersection_rect.w, // And this is how much of the caption_surface surface we want to clip
             intersection_rect.h
     };
-    // Now, last thing: We now know what part of the text surface we need to clip, but we need to RENDER it at the
+    // Now, last thing: We now know what part of the caption_surface surface we need to clip, but we need to RENDER it at the
     // intersection between the FOV and the caption rectangle.
     // We're going to copy the pixels from the region outlined by text_surface_clip_region on text_surface to the
     // pixels outlined by intersection_rect. That should give us the clipped caption on the display!
-    render_surface_as_texture(context->renderer, text_surface, &text_surface_clip_region, &intersection_rect);
-    SDL_FreeSurface(text_surface);
+    render_surface_as_texture(context->renderer, caption_surface, &text_surface_clip_region, &intersection_rect);
 }

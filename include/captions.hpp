@@ -7,24 +7,25 @@
 
 #include <vector>
 #include <netinet/in.h>
+#include <SDL.h>
+#include <SDL_surface.h>
 #include "cog-flatbuffer-definitions/caption_message_generated.h"
 #include "nlohmann/json.hpp"
 
 
 class CaptionModel {
 private:
-    std::vector<std::pair<cog::Juror, std::string>> spoken_so_far;
-    std::mutex text_mutex;
-    const static int LINE_LENGTH = 30;
-
-    static std::string wrap(const std::string &text, int line_length);
-
+    size_t idx = 0;
+    std::vector<std::pair<SDL_Surface *, cog::Juror>> captions;
 public:
-    explicit CaptionModel() = default;
+    CaptionModel(SDL_Renderer *renderer, const std::string &path_to_bitmaps, const std::vector<cog::Juror> &speaker_ids,
+                 int blur_level);
 
-    void add_word(const std::string &new_word, cog::Juror speaker);
+    ~CaptionModel();
 
-    std::pair<cog::Juror, std::string> get_current_text(int line_length = LINE_LENGTH);
+    void increment();
+
+    std::pair<SDL_Surface *, cog::Juror> get_current_caption();
 };
 
 cog::Juror juror_from_string(const std::string &juror_str);

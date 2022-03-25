@@ -81,19 +81,14 @@ SDL_Color color_string_to_color(const std::string &color_str) {
     return result;
 }
 
-std::tuple<int, int, SDL_Color, SDL_Color, std::string, int>
+std::tuple<int, int, int>
 parse_arguments(int argc, char *argv[]) {
     int video_section;
     int presentation_method;
-    SDL_Color foreground_color{0, 0, 0, 0};
-    SDL_Color background_color{0, 0, 0, 0};
-    std::string path_to_font;
-    int font_size;
+    int blur_level = 0;
     int cmd_opt;
     int option_index = 0;
-    std::string fg_color_str;
-    std::string bg_color_str;
-    cmd_opt = getopt_long(argc, argv, "v:m:f:b:p:s:", long_options, &option_index);
+    cmd_opt = getopt_long(argc, argv, "v:m:l:", long_options, &option_index);
     while (cmd_opt) {
         if (cmd_opt == -1) {
             break;
@@ -109,26 +104,14 @@ parse_arguments(int argc, char *argv[]) {
             case 'm':
                 presentation_method = std::stoi(optarg);
                 break;
-            case 'f':
-                fg_color_str = std::string(optarg);
-                foreground_color = color_string_to_color(fg_color_str);
-                break;
-            case 'b':
-                bg_color_str = std::string(optarg);
-                background_color = color_string_to_color(bg_color_str);
-                break;
-            case 'p':
-                path_to_font = std::string(optarg);
-                break;
-            case 's':
-                font_size = std::stoi(optarg);
+            case 'l':
+                blur_level = std::stoi(optarg);
                 break;
             case '?':
             default:
-                std::cerr << "Unknown option received: " << cmd_opt << std::endl;
+                std::cerr << "Unknown option received: " << (char)cmd_opt << std::endl;
         }
-        cmd_opt = getopt_long(argc, argv, "v:m:f:b:p:s:", long_options, &option_index);
+        cmd_opt = getopt_long(argc, argv, "v:m:l:", long_options, &option_index);
     }
-    return std::make_tuple(video_section, presentation_method, foreground_color, background_color, path_to_font,
-                           font_size);
+    return std::make_tuple(video_section, presentation_method, blur_level);
 }
