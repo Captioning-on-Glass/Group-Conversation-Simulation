@@ -19,9 +19,6 @@
 #define WINDOW_TITLE "Four Angry Men"
 
 #define REGISTERED_GRAPHICS 1
-#define NONREGISTERED_GRAPHICS 2
-#define NONREGISTERED_GRAPHICS_WITH_ARROWS 3
-#define CONTROL 4
 
 #define WINDOW_OFFSET_X 83 // ASSUMING 3840x2160 DISPLAY
 #define WINDOW_OFFSET_Y 292
@@ -59,12 +56,6 @@ static void unlock(void *data, [[maybe_unused]] void *id, [[maybe_unused]] void 
             // Registered graphics remain stationary in space
             render_registered_captions(app_context);
             break;
-        case NONREGISTERED_GRAPHICS:
-            // Non-registered graphics follow the user's head orientation around the screen
-            render_nonregistered_captions(app_context);
-            break;
-        case CONTROL:
-            break;
         default:
             std::cout << "Unknown method received: " << app_context->presentation_method << std::endl;
             break;
@@ -99,7 +90,8 @@ int main(int argc, char *argv[]) {
     [
     video_section, // Which video section will we be rendering?
     presentation_method, // How will we be presenting captions?
-    blur_level // How much blur will we be applying to our captions?
+    blur_level, // How much blur will we be applying to our captions?
+    opacity
     ] = parse_arguments(argc, argv);
 
     std::cout << "Using presentation method: " << presentation_method << std::endl;
@@ -123,6 +115,7 @@ int main(int argc, char *argv[]) {
             {cog::Juror_JuryForeman, {1250.f / 1920.f, 600.f / 1080.f}}
     };
     struct AppContext app_context{};
+    app_context.opacity = opacity;
     app_context.presentation_method = presentation_method;
     app_context.juror_positions = &juror_positions;
     app_context.window_width = SCREEN_PIXEL_WIDTH;

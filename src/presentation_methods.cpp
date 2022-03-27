@@ -48,6 +48,16 @@ void render_nonregistered_captions(const AppContext *context) {
 }
 
 void render_registered_captions(const AppContext *context) {
+    SDL_SetRenderDrawBlendMode(context->renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(context->renderer, 0, 0, 0, context->opacity);
+    auto mask_rect = SDL_Rect {
+            0,
+            0,
+            context->window_width,
+            context->window_height
+    };
+    SDL_RenderFillRect(context->renderer, &mask_rect);
+
     const auto[caption_surface, juror] = context->caption_model->get_current_caption();
 
     // We've previously identified where on the screen to place the captions underneath the jurors. Those are represented as percentages of the VLC surface fov_x_2/height
