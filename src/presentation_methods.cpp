@@ -56,6 +56,10 @@ void render_registered_captions(const AppContext *context) {
     int text_x = left_x_percent * context->display_rect.w;
     int text_y = left_y_percent * context->display_rect.h;
 
+    SDL_Rect rect = {text_x, text_y, caption_surface->w, caption_surface->h};
+    render_surface_as_texture(context->renderer, caption_surface, nullptr, &rect);
+    return;
+
     // Now, here's where we do our clipping behavior.
     // The general idea is as follows:
     //
