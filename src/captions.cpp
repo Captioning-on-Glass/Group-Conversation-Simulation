@@ -14,13 +14,16 @@ CaptionModel::CaptionModel(SDL_Renderer *renderer, const std::string &path_to_bi
         if (!std::filesystem::exists(filepath)) {
             break;
         }
-        this->captions.emplace_back(IMG_Load(filepath.c_str()), speaker_ids.at(i));
+        auto surface = IMG_Load(filepath.c_str());
+        auto texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface);
+        this->captions.emplace_back(std::make_pair(texture, speaker_ids.at(i)));
     }
 }
 
 CaptionModel::~CaptionModel() {
-    for (auto [surface, juror] : this->captions) {
-        SDL_FreeSurface(surface);
+    for (auto[texture, juror]: this->captions) {
+        SDL_DestroyTexture(texture);
     }
 }
 
@@ -28,7 +31,7 @@ void CaptionModel::increment() {
     this->idx++;
 }
 
-std::pair<SDL_Surface*, cog::Juror> CaptionModel::get_current_caption() {
+std::pair<SDL_Texture *, cog::Juror> CaptionModel::get_current_caption() {
     return this->captions.at(this->idx);
 }
 

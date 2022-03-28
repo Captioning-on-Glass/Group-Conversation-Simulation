@@ -41,86 +41,37 @@ render_text(SDL_Renderer *renderer, TTF_Font *font, const std::string &text, int
 
 void render_nonregistered_captions(const AppContext *context) {
     auto left_x = calculate_display_x_from_orientation(context);
-    auto[caption_surface, juror] = context->caption_model->get_current_caption();
-    auto destination_rect = SDL_Rect{static_cast<int>(left_x), context->y, caption_surface->w, caption_surface->h};
-    render_surface_as_texture(context->renderer, caption_surface, nullptr,
-                              &destination_rect);
+    auto[caption_texture, juror] = context->caption_model->get_current_caption();
+    int width = 0;
+    int height = 0;
+    SDL_QueryTexture(caption_texture, nullptr, nullptr, &width, &height);
+    auto destination_rect = SDL_Rect{static_cast<int>(left_x), context->y, width, height};
+    SDL_RenderCopy(context->renderer, caption_texture, nullptr, &destination_rect);
 }
 
 void render_registered_captions(const AppContext *context) {
-    SDL_SetRenderDrawBlendMode(context->renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(context->renderer, 0, 0, 0, context->opacity);
-    auto mask_rect = SDL_Rect {
-            0,
-            0,
-            context->window_width,
-            context->window_height
-    };
-    SDL_RenderFillRect(context->renderer, &mask_rect);
-
-    const auto[caption_surface, juror] = context->caption_model->get_current_caption();
-
+    const auto[caption_texture, juror] = context->caption_model->get_current_caption();
+    SDL_SetTextureBlendMode(caption_texture, SDL_BLENDMODE_NONE);
     // We've previously identified where on the screen to place the captions underneath the jurors. Those are represented as percentages of the VLC surface fov_x_2/height
     auto[left_x_percent, left_y_percent] = context->juror_positions->at(juror);
     // Now we just re-hydrate those values with the current size of the VLC surface to get where the captions should be positioned.
     int text_x = left_x_percent * context->display_rect.w;
     int text_y = left_y_percent * context->display_rect.h;
-
-    SDL_Rect rect = {text_x, text_y, caption_surface->w, caption_surface->h};
-    render_surface_as_texture(context->renderer, caption_surface, nullptr, &rect);
-    return;
-
-    // Now, here's where we do our clipping behavior.
-    // The general idea is as follows:
-    //
-    // The text surface has a width and height, and we know the text_x and text_y of where we're going to draw the
-
-    // caption (assuming no clipping at all).
-    const auto surface_rect = SDL_Rect{text_x, text_y, caption_surface->w, caption_surface->h};
-
-    // We also have a pre-defined field-of-view (FOV), which is how much the person would be able to see if they were
-    // wearing a realistic HWD.
-    auto azimuth = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
-    const auto half_fov_in_radians = to_radians(HALF_FOV);
-
-    // We can calculate how much of the window fov_x_2 the FOV covers with some trig...
-    const auto fov_x = angle_to_pixel_position(azimuth) - angle_to_pixel_position(to_radians(HALF_FOV));
-    const auto fov_x_2 = angle_to_pixel_position(azimuth) + angle_to_pixel_position(to_radians(HALF_FOV));
-    auto l = std::min(fov_x, fov_x_2);
-    auto r = std::max(fov_x, fov_x_2);
-    const auto fov_region = SDL_Rect{l, 0, r-l, context->window_height};
-
-//    SDL_SetRenderDrawBlendMode(context->renderer, SDL_BLENDMODE_BLEND);
-//    SDL_SetRenderDrawColor(context->renderer, 0, 0, 0, 100);
-//    SDL_SetRenderDrawBlendMode(context->renderer, SDL_BLENDMODE_NONE);
-//    SDL_RenderFillRect(context->renderer, &fov_region);
-//    SDL_SetRenderDrawColor(context->renderer, 255, 0, 0, 255);
-//    const auto azimuth_x = angle_to_pixel_position(azimuth);
-//    SDL_RenderDrawLine(context->renderer, azimuth_x, 0, azimuth_x, context->window_height);
-
-    // and then find the intersection between the FOV region (which extends from the top to the bottom of the window, to
-    // keep things easy) and the caption_surface surface rectangle, which should give us a rectangle indicating what part of the
-    // caption should be rendered.
-    auto intersection = rectangle_intersection(&surface_rect, &fov_region);
-    // If they don't intersect at all, there's nothing to render, we stop here.
-    if (!intersection.has_value()) {
-        return;
-    }
-    SDL_Rect intersection_rect = intersection.value();
-
-    // One thing to note: our intersection rectangle could be located anywhere on the screen
-    // (0 <= intersection_x <= WINDOW_WIDTH) and (0 <= intersection_y <= WINDOW_HEIGHT)
-    // But that's not what we want! We want to know how much of the TEXT SURFACE we want to render.
-    // So let's calculate how far intersection_rect.x is from text_x, and how far intersection_rect.y is from text_y
-    SDL_Rect text_surface_clip_region = {
-            intersection_rect.x - text_x, // This won't ever be negative, because intersection_x >= text_x always
-            intersection_rect.y - text_y, // Same here
-            intersection_rect.w, // And this is how much of the caption_surface surface we want to clip
-            intersection_rect.h
-    };
-    // Now, last thing: We now know what part of the caption_surface surface we need to clip, but we need to RENDER it at the
-    // intersection between the FOV and the caption rectangle.
-    // We're going to copy the pixels from the region outlined by text_surface_clip_region on text_surface to the
-    // pixels outlined by intersection_rect. That should give us the clipped caption on the display!
-    render_surface_as_texture(context->renderer, caption_surface, &text_surface_clip_region, &intersection_rect);
+    auto texture = SDL_CreateTexture(context->renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET,
+                                     context->window_width, context->window_height);
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawBlendMode(context->renderer, SDL_BLENDMODE_NONE);
+    SDL_SetRenderTarget(context->renderer, texture);
+    SDL_SetRenderDrawColor(context->renderer, 0, 0, 0, 192);
+    SDL_RenderFillRect(context->renderer, nullptr);
+    int width = 0;
+    int height = 0;
+    SDL_QueryTexture(caption_texture, nullptr, nullptr, &width, &height);
+    auto src_rect = SDL_Rect{0, 0, width, height};
+    auto dst_rect = SDL_Rect{text_x, text_y, width, height};
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
+    SDL_RenderCopy(context->renderer, caption_texture, &src_rect, &dst_rect);
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderTarget(context->renderer, nullptr);
+    SDL_RenderCopy(context->renderer, texture, nullptr, nullptr);
 }

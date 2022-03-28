@@ -16,7 +16,7 @@
 class CaptionModel {
 private:
     size_t idx = 0;
-    std::vector<std::pair<SDL_Surface *, cog::Juror>> captions;
+    std::vector<std::pair<SDL_Texture *, cog::Juror>> captions;
 public:
     CaptionModel(SDL_Renderer *renderer, const std::string &path_to_bitmaps, const std::vector<cog::Juror> &speaker_ids,
                  int blur_level);
@@ -25,7 +25,7 @@ public:
 
     void increment();
 
-    std::pair<SDL_Surface *, cog::Juror> get_current_caption();
+    std::pair<SDL_Texture *, cog::Juror> get_current_caption();
 };
 
 cog::Juror juror_from_string(const std::string &juror_str);
