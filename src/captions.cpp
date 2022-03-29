@@ -6,7 +6,7 @@
 
 CaptionModel::CaptionModel(SDL_Renderer *renderer, const std::string &path_to_bitmaps,
                            const std::vector<cog::Juror> &speaker_ids, const int blur_level) {
-    // Written on a plane w/o wifi, this can be done more cleanly.
+    // Written on a plane w/o Wi-Fi, this can be done more cleanly.
 
     for (auto i = 0; i < speaker_ids.size(); ++i) {
         const std::string filepath =
@@ -52,28 +52,9 @@ cog::Juror juror_from_string(const std::string &juror_str) {
     return juror;
 }
 
-void transmit_caption(int socket, sockaddr_in *client_address, std::mutex *socket_mutex, const std::string &text,
-                      cog::Juror speaker_id, cog::Juror focused_id, int message_id, int chunk_id) {
-    flatbuffers::FlatBufferBuilder builder(1024);
-    auto caption_message = cog::CreateCaptionMessageDirect(builder, text.c_str(), speaker_id, focused_id, message_id,
-                                                           chunk_id);
-    builder.Finish(caption_message);
-    uint8_t *buffer = builder.GetBufferPointer();
-    const auto size = builder.GetSize();
-    socklen_t len = sizeof(*client_address);
-
-    socket_mutex->lock();
-    if (sendto(socket, buffer, 1024, 0, (struct sockaddr *) &(*client_address),
-               len) < 0) {
-        std::cerr << "sendto failed: " << strerror(errno) << std::endl;
-    }
-    socket_mutex->unlock();
-}
-
 
 void
-start_caption_stream(const bool *started, int socket, sockaddr_in *client_address, std::mutex *socket_mutex,
-                     nlohmann::json *caption_json, CaptionModel *model) {
+start_caption_stream(const bool *started, nlohmann::json *caption_json, CaptionModel *model) {
     while (!(*started)) {}
     for (auto i = 0; i < caption_json->size(); ++i) {
         auto text = caption_json->at(i)["text"].get<std::string>();
@@ -89,7 +70,6 @@ start_caption_stream(const bool *started, int socket, sockaddr_in *client_addres
         auto chunk_id = caption_json->at(i)["chunk_id"].get<int>();
         auto focused_id = cog::Juror_JuryForeman;
         std::this_thread::sleep_for(std::chrono::duration<double, std::ratio<1, 1000>>(delay));
-//        transmit_caption(socket, client_address, socket_mutex, text, speaker_id, focused_id, message_id, chunk_id);
         model->increment();
     }
 }

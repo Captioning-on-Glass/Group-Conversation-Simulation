@@ -66,7 +66,7 @@ std::tuple<int, sockaddr_in> connect_to_client(int port) {
     return std::make_tuple(sockfd, cliaddr);
 }
 
-std::tuple<int, int, int, int>
+std::tuple<int, int>
 parse_arguments(int argc, char *argv[]) {
     int video_section;
     int presentation_method;
@@ -74,7 +74,7 @@ parse_arguments(int argc, char *argv[]) {
     int opacity = 0;
     int cmd_opt;
     int option_index = 0;
-    cmd_opt = getopt_long(argc, argv, "v:m:l:o:", long_options, &option_index);
+    cmd_opt = getopt_long(argc, argv, "v:l:", long_options, &option_index);
     while (cmd_opt) {
         if (cmd_opt == -1) {
             break;
@@ -87,20 +87,18 @@ parse_arguments(int argc, char *argv[]) {
                     exit(EXIT_FAILURE);
                 }
                 break;
-            case 'm':
-                presentation_method = std::stoi(optarg);
-                break;
             case 'l':
                 blur_level = std::stoi(optarg);
-                break;
-            case 'o':
-                opacity = std::stoi(optarg);
+                if (blur_level < 0 || blur_level > 3) {
+                    std::cerr << "Please pick a blur level between 0-3. (i.e. \"-l 2\")" << std::endl;
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case '?':
             default:
-                std::cerr << "Unknown option received: " << (char)cmd_opt << std::endl;
+                std::cerr << "Unknown option received: " << (char) cmd_opt << std::endl;
         }
-        cmd_opt = getopt_long(argc, argv, "v:m:l:o:", long_options, &option_index);
+        cmd_opt = getopt_long(argc, argv, "v:l:", long_options, &option_index);
     }
-    return std::make_tuple(video_section, presentation_method, blur_level, opacity);
+    return std::make_tuple(video_section, blur_level);
 }

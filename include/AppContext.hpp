@@ -15,8 +15,6 @@ struct AppContext {
     SDL_Renderer *renderer;
     SDL_Texture *texture;
     SDL_mutex *mutex;
-    std::mutex *azimuth_mutex;
-    std::deque<float> *azimuth_buffer;
     const std::map<cog::Juror, std::pair<double, double>> *juror_positions;
     int opacity;
     CaptionModel *caption_model;

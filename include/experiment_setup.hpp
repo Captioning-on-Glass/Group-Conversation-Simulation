@@ -21,13 +21,11 @@ std::tuple<int, sockaddr_in> connect_to_client(int port);
 
 
 static struct option long_options[] = {
-        {"video_section",       required_argument, nullptr, 'v'},
-        {"presentation_method", required_argument, nullptr, 'm'},
-        {"blur_level",          required_argument, nullptr, 'l'},
-        {"opacity",             required_argument, nullptr, 'o'}
+        {"video_section", required_argument, nullptr, 'v'},
+        {"blur_level",    required_argument, nullptr, 'l'},
 };
 
-std::tuple<int, int, int, int>
+std::tuple<int, int>
 parse_arguments(int argc, char *argv[]);
 
 #endif //COG_GROUP_CONVO_CPP_EXPERIMENT_SETUP_HPP

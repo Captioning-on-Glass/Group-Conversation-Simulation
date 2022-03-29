@@ -31,7 +31,6 @@ public:
 cog::Juror juror_from_string(const std::string &juror_str);
 
 void
-start_caption_stream(const bool *started, int socket, sockaddr_in *client_address, std::mutex *socket_mutex,
-                     nlohmann::json *caption_json, CaptionModel *model);
+start_caption_stream(const bool *started, nlohmann::json *caption_json, CaptionModel *model);
 
 #endif //COG_GROUP_CONVO_CPP_CAPTIONS_HPP

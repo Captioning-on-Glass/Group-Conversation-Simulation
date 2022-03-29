@@ -14,14 +14,15 @@
 #include <SDL_mutex.h>
 #include <SDL_image.h>
 
-#define PORT 65432
-
 #define WINDOW_TITLE "Four Angry Men"
 
 #define REGISTERED_GRAPHICS 1
 
 #define WINDOW_OFFSET_X 83 // ASSUMING 3840x2160 DISPLAY
 #define WINDOW_OFFSET_Y 292
+
+constexpr auto PRESENTATION_METHOD = REGISTERED_GRAPHICS;
+constexpr auto OPACITY = 0;
 
 /**
  * This function is called prior to VLC rendering a video frame.
@@ -32,10 +33,10 @@
  * @return nullptr.
  */
 static void *lock(void *data, void **p_pixels) {
-    auto *c = (AppContext *) data;
+    const auto app_context = static_cast<AppContext *>(data);
     int pitch;
-    SDL_LockMutex(c->mutex);
-    SDL_LockTexture(c->texture, nullptr, p_pixels, &pitch);
+    SDL_LockMutex(app_context->mutex);
+    SDL_LockTexture(app_context->texture, nullptr, p_pixels, &pitch);
 
     return nullptr; // Picture identifier, not needed here.
 }
@@ -48,7 +49,7 @@ static void *lock(void *data, void **p_pixels) {
  */
 static void unlock(void *data, [[maybe_unused]] void *id, [[maybe_unused]] void *const *p_pixels) {
 
-    const auto *app_context = (AppContext *) data;
+    const auto app_context = static_cast<AppContext *>(data);
 
     // Based on the presentation method selected by the researcher, we want to render captions in different ways.
     switch (app_context->presentation_method) {
@@ -57,7 +58,8 @@ static void unlock(void *data, [[maybe_unused]] void *id, [[maybe_unused]] void 
             render_registered_captions(app_context);
             break;
         default:
-            std::cout << "Unknown method received: " << app_context->presentation_method << std::endl;
+            std::cerr << "Unknown method received: " << app_context->presentation_method << std::endl;
+            exit(EXIT_FAILURE);
             break;
     }
     SDL_RenderPresent(app_context->renderer);
@@ -72,8 +74,7 @@ static void unlock(void *data, [[maybe_unused]] void *id, [[maybe_unused]] void 
  * @param id Honestly? Not really sure what this parameter is, but I haven't needed it. It's here to comply with the function signature expected by VLC.
  */
 static void display(void *data, void *id) {
-
-    auto *app_context = (AppContext *) data;
+    auto *app_context = static_cast<AppContext *>(data);
 
     app_context->display_rect.x = 0;
     app_context->display_rect.y = 0;
@@ -89,20 +90,14 @@ int main(int argc, char *argv[]) {
     const auto
     [
     video_section, // Which video section will we be rendering?
-    presentation_method, // How will we be presenting captions?
-    blur_level, // How much blur will we be applying to our captions?
-    opacity
+    blur_level // How much blur will we be applying to our captions?
     ] = parse_arguments(argc, argv);
+
+    const auto presentation_method = PRESENTATION_METHOD;
 
     std::cout << "Using presentation method: " << presentation_method << std::endl;
     std::cout << "Playing video section: " << video_section << std::endl;
     std::cout << "Using blur level: " << blur_level << std::endl;
-
-    // Print the address of this server, and which presentation method we're going to be using.
-    // This QR code will be scanned by the HWD so that it can connect to our server.
-    print_connection_qr(presentation_method, PORT);
-    // Now, wait for the connection.
-    auto[socket, cliaddr] = connect_to_client(PORT);
 
     // Let's start building our application context. This is basically a struct that stores pointers to
     // important mutexes, buffers, and variables.
@@ -115,7 +110,7 @@ int main(int argc, char *argv[]) {
             {cog::Juror_JuryForeman, {1250.f / 1920.f, 600.f / 1080.f}}
     };
     struct AppContext app_context{};
-    app_context.opacity = opacity;
+    app_context.opacity = OPACITY;
     app_context.presentation_method = presentation_method;
     app_context.juror_positions = &juror_positions;
     app_context.window_width = SCREEN_PIXEL_WIDTH;
@@ -148,7 +143,7 @@ int main(int argc, char *argv[]) {
     // Create the window that we'll use
     auto window = SDL_CreateWindow(WINDOW_TITLE, 0, 0,
                                    app_context.window_width,
-                                   app_context.window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+                                   app_context.window_height, SDL_WINDOW_SHOWN);
     if (window == nullptr) {
         printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
         return 1;
@@ -156,7 +151,8 @@ int main(int argc, char *argv[]) {
     SDL_SetWindowPosition(window, window_pos_x, window_pos_y);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "Linear");
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-    app_context.renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE);
+    app_context.renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC |
+                                                          SDL_RENDERER_TARGETTEXTURE);
     app_context.texture = SDL_CreateTexture(app_context.renderer, SDL_PIXELFORMAT_BGR565, SDL_TEXTUREACCESS_STREAMING,
                                             app_context.window_width, app_context.window_height);
     if (!app_context.texture) {
@@ -215,25 +211,13 @@ int main(int argc, char *argv[]) {
     libvlc_video_set_format(mp, "RV16", app_context.window_width, app_context.window_height,
                             app_context.window_width * 2);
 
-    std::mutex azimuth_mutex;
-    app_context.azimuth_mutex = &azimuth_mutex;
-    std::deque<float> azimuth_buffer;
-    app_context.azimuth_buffer = &azimuth_buffer;
-    std::mutex socket_mutex;
-    std::thread read_orientation_thread(read_orientation, socket, &cliaddr, &socket_mutex, &azimuth_mutex,
-                                        &azimuth_buffer);
-
-    // Wait for data to start getting transmitted from the phone
-    // before we start playing our video on VLC and rendering captions.
-//    while (azimuth_buffer.size() < MOVING_AVG_SIZE) {
-//    }
     bool started = false;
 
     SDL_Event event;
     bool done = false;
     int action = 0;
     // Main loop.
-    std::thread play_captions_thread(start_caption_stream, &started, socket, &cliaddr, &socket_mutex,
+    std::thread play_captions_thread(start_caption_stream, &started,
                                      &json,
                                      &caption_model);
     SDL_RenderPresent(app_context.renderer);
