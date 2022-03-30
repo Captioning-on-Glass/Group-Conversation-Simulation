@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
     // Create the window that we'll use
     auto window = SDL_CreateWindow(WINDOW_TITLE, 0, 0,
                                    app_context.window_width,
-                                   app_context.window_height, SDL_WINDOW_SHOWN);
+                                   app_context.window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (window == nullptr) {
         printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
         return 1;
