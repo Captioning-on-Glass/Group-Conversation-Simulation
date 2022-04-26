@@ -25,12 +25,13 @@ SDL_Color color_string_to_color(const std::string &color_str);
 static struct option long_options[] = {
         {"video_section",       required_argument, nullptr, 'v'},
         {"presentation_method", required_argument, nullptr, 'm'},
+        {"angle_fov",            required_argument, nullptr, 'a'},
         {"foreground_color",    required_argument, nullptr, 'f'},
         {"background_color",    required_argument, nullptr, 'b'},
         {"path_to_font",        required_argument, nullptr, 'p'},
 };
 
-std::tuple<int, int, SDL_Color, SDL_Color, std::string>
+std::tuple<int, int, int, SDL_Color, SDL_Color, std::string>
 parse_arguments(int argc, char *argv[]);
 
 #endif //COG_GROUP_CONVO_CPP_EXPERIMENT_SETUP_HPP

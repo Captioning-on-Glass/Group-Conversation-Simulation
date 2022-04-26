@@ -119,12 +119,12 @@ void render_registered_captions(const AppContext *context) {
     // We also have a pre-defined field-of-view (FOV), which is how much the person would be able to see if they were
     // wearing a realistic HWD.
     auto azimuth = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
-    const auto half_fov_in_radians = to_radians(HALF_FOV);
+    const auto half_fov_in_radians = to_radians(context->half_fov);
 
     // We can calculate how much of the window fov_x_2 the FOV covers with some trig...
-    const auto fov_x = angle_to_pixel_position(azimuth) - angle_to_pixel_position(to_radians(HALF_FOV)) +
+    const auto fov_x = angle_to_pixel_position(azimuth) - angle_to_pixel_position(to_radians(context->half_fov)) +
                        context->window_width / 3;
-    const auto fov_x_2 = angle_to_pixel_position(azimuth) + angle_to_pixel_position(to_radians(HALF_FOV)) +
+    const auto fov_x_2 = angle_to_pixel_position(azimuth) + angle_to_pixel_position(to_radians(context->half_fov)) +
                          context->window_width / 3;
     auto l = std::min(fov_x, fov_x_2);
     auto r = std::max(fov_x, fov_x_2);

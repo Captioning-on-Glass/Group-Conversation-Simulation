@@ -109,6 +109,7 @@ int main(int argc, char *argv[]) {
     [
     video_section, // Which video section will we be rendering?
     presentation_method, // How will we be presenting captions?
+    half_fov, // What is the user's half field of view?
     foreground_color, // What color will the text be? RGBA format
     background_color, // What color will the background behind the text be? RGBA format
     path_to_font // Where's the smallest_font located?
@@ -116,6 +117,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Using presentation method: " << presentation_method << std::endl;
     std::cout << "Playing video section: " << video_section << std::endl;
+    std::cout << "Using full field of view (degrees): " << ((int) 2*half_fov) << std::endl;
 
     // Print the address of this server, and which presentation method we're going to be using.
     // This QR code will be scanned by the HWD so that it can connect to our server.
@@ -136,6 +138,7 @@ int main(int argc, char *argv[]) {
     struct AppContext app_context{};
     app_context.presentation_method = presentation_method;
     app_context.juror_positions = &juror_positions;
+    app_context.half_fov = half_fov;
     app_context.window_width = SCREEN_PIXEL_WIDTH;
     app_context.window_height = SCREEN_PIXEL_HEIGHT;
 

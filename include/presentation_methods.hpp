@@ -7,7 +7,7 @@
 #include "AppContext.hpp"
 
 constexpr int WRAP_LENGTH = 0;
-constexpr int HALF_FOV = 40;
+//constexpr int HALF_FOV = 40;
 
 /**
  * Return the intersection between two SDL_Rects as another SDL_Rect. If there is no intersection, return nullopt
