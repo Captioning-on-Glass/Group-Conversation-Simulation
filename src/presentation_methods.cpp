@@ -93,7 +93,7 @@ void render_registered_captions(const AppContext *context) {
     if (text.empty()) {
         return;
     }
-    // We've previously identified where on the screen to place the captions underneath the jurors. Those are represented as percentages of the VLC surface fov_x_2/height
+    // We've previously identified where on the screen to place the captions u nderneath the jurors. Those are represented as percentages of the VLC surface fov_x_2/height
     auto[left_x_percent, left_y_percent] = context->juror_positions->at(juror);
     // Now we just re-hydrate those values with the current size of the VLC surface to get where the captions should be positioned.
     int text_x = left_x_percent * context->display_rect.w;
@@ -101,7 +101,6 @@ void render_registered_captions(const AppContext *context) {
     // Retrieve the font to be used for the current juror
     auto font = context->juror_font_sizes->at(juror);
     // And let's create a surface of the text we've been given.
-
     auto text_surface = TTF_RenderText_Shaded_Wrapped(font, text.c_str(), *context->foreground_color,
                                                       *context->background_color,
                                                       WRAP_LENGTH);
@@ -142,7 +141,16 @@ void render_registered_captions(const AppContext *context) {
     // caption should be rendered.
     auto intersection = rectangle_intersection(&surface_rect, &fov_region);
     // If they don't intersect at all, there's nothing to render, we stop here.
+    int arrow_x = (l + r) / 2;
+    SDL_Surface *arrow_surface = nullptr;
     if (!intersection.has_value()) {
+        if(l > text_x) {
+            arrow_surface = context->back_arrow;
+        } else{
+            arrow_surface = context->forward_arrow;
+        }
+        auto destination_rect = SDL_Rect{arrow_x, context->y - 400 , arrow_surface->w, arrow_surface->h};
+        render_surface_as_texture(context->renderer, arrow_surface, nullptr, &destination_rect);
         SDL_FreeSurface(text_surface);
         return;
     }

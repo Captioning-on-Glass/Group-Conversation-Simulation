@@ -15,7 +15,7 @@ class CaptionModel {
 private:
     std::vector<std::pair<cog::Juror, std::string>> spoken_so_far;
     std::mutex text_mutex;
-    const static int LINE_LENGTH = 30;
+    const static int LINE_LENGTH = 20;
 
     static std::string wrap(const std::string &text, int line_length);
 
