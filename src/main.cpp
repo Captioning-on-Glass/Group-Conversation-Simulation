@@ -15,9 +15,6 @@
 #include <SDL_ttf.h>
 #include <SDL_image.h>
 
-#define PORT 65432
-
-
 #define FONT_SIZE_SMALL 26
 #define FONT_SIZE_MEDIUM 26
 #define FONT_SIZE_LARGE 28
@@ -44,6 +41,7 @@
 static void *lock(void *data, void **p_pixels) {
     auto *c = (AppContext *) data;
     int pitch;
+
     SDL_LockMutex(c->mutex);
     SDL_LockTexture(c->texture, nullptr, p_pixels, &pitch);
 
@@ -115,241 +113,242 @@ int main(int argc, char *argv[]) {
     path_to_font // Where's the smallest_font located?
     ] = parse_arguments(argc, argv);
 
-    std::cout << "Using presentation method: " << presentation_method << std::endl;
-    std::cout << "Playing video section: " << video_section << std::endl;
-    std::cout << "Using full field of view (degrees): " << ((int) 2*half_fov) << std::endl;
-
-    // Print the address of this server, and which presentation method we're going to be using.
-    // This QR code will be scanned by the HWD so that it can connect to our server.
-    print_connection_qr(presentation_method, PORT);
-    // Now, wait for the connection.
-    auto[socket, cliaddr] = connect_to_client(PORT);
-
-    // Let's start building our application context. This is basically a struct that stores pointers to
-    // important mutexes, buffers, and variables.
-
-    // Hard-coded positions of where captions should be rendered on the video.
-    const std::map<cog::Juror, std::pair<double, double>> juror_positions{
-            {cog::Juror_JurorA,      {1050.f / 1920.f, 550.f / 1080.f}},
-            {cog::Juror_JurorB,      {675.f / 1920.f,  550.f / 1080.f}},
-            {cog::Juror_JurorC,      {197.f / 1920.f,  650.f / 1080.f}},
-            {cog::Juror_JuryForeman, {1250.f / 1920.f, 600.f / 1080.f}}
-    };
-    struct AppContext app_context{};
-    app_context.presentation_method = presentation_method;
-    app_context.juror_positions = &juror_positions;
-    app_context.half_fov = half_fov;
-    app_context.window_width = SCREEN_PIXEL_WIDTH;
-    app_context.window_height = SCREEN_PIXEL_HEIGHT;
-
-    const auto juror_a_l = juror_positions.at(cog::Juror_JurorA).first * app_context.window_width;
-    const auto juror_a_r = juror_a_l + 300.f;
-    const auto juror_b_l = juror_positions.at(cog::Juror_JurorB).first * app_context.window_width;
-    const auto juror_b_r = juror_b_l + 350.f;
-    const auto juror_c_l = juror_positions.at(cog::Juror_JurorC).first * app_context.window_width;
-    const auto juror_c_r = juror_c_l + 600.f;
-    const auto jury_foreman_l = juror_positions.at(cog::Juror_JuryForeman).first * app_context.window_width;
-    const auto jury_foreman_r = jury_foreman_l + 600.f;
-    const std::map<cog::Juror, std::pair<double, double>> juror_intervals{
-            {cog::Juror_JurorA,      {juror_a_l,      juror_a_r}},
-            {cog::Juror_JurorB,      {juror_b_l,      juror_b_r}},
-            {cog::Juror_JurorC,      {juror_c_l,      juror_c_r}},
-            {cog::Juror_JuryForeman, {jury_foreman_l, jury_foreman_r}}
-    };
-    app_context.juror_intervals = &juror_intervals;
-    // For non-registered captions, render them at 75% of the window's height.
-    app_context.y = app_context.window_height * 0.6;
-
-    // Let's load the foreground and background colors.
-    app_context.foreground_color = &foreground_color;
-    app_context.background_color = &background_color;
-
-    // Let's initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
-        return 1;
+    int port = 65429 + presentation_method;
+    if(presentation_method == 3) {
+        port = 65432;
     }
-    // And initialize SDL_ttf, which will render text on our video frames.
-    if (TTF_Init() == -1) {
-        printf("[ERROR] TTF_Init() Failed with: %s\n", TTF_GetError());
-        exit(2);
-    }
+    if(true) {
+        std::cout << "Using presentation method: " << presentation_method << std::endl;
+        std::cout << "Playing video section: " << video_section << std::endl;
+        std::cout << "Using full field of view (degrees): " << ((int) 2 * half_fov) << std::endl;
+        std::cout << "Using Port: " << port;
+        // Print the address of this server, and which presentation method we're going to be using.
+        // This QR code will be scanned by the HWD so that it can connect to our server.
+        print_connection_qr(presentation_method, port);
+        // Now, wait for the connection.
+        auto[socket, cliaddr] = connect_to_client(port);
 
-    TTF_Font *smallest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_SMALL);
-    TTF_Font *medium_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_MEDIUM);
-    TTF_Font *largest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_LARGE);
-    app_context.smallest_font = smallest_font;
-    app_context.medium_font = medium_font;
-    app_context.largest_font = largest_font;
-    const std::map<cog::Juror, TTF_Font *> juror_font_sizes{
-            {cog::Juror_JurorA,      medium_font},
-            {cog::Juror_JurorB,      medium_font},
-            {cog::Juror_JuryForeman, medium_font},
-            {cog::Juror_JurorC,      medium_font}
-    };
-    app_context.juror_font_sizes = &juror_font_sizes;
+        // Let's start building our application context. This is basically a struct that stores pointers to
+        // important mutexes, buffers, and variables.
+
+        // Hard-coded positions of where captions should be rendered on the video.
+        const std::map<cog::Juror, std::pair<double, double>> juror_positions{
+                {cog::Juror_JurorA,      {1050.f / 1920.f, 550.f / 1080.f}},
+                {cog::Juror_JurorB,      {675.f / 1920.f,  550.f / 1080.f}},
+                {cog::Juror_JurorC,      {197.f / 1920.f,  650.f / 1080.f}},
+                {cog::Juror_JuryForeman, {1250.f / 1920.f, 600.f / 1080.f}}
+        };
+        struct AppContext app_context{};
+        app_context.presentation_method = presentation_method;
+        app_context.juror_positions = &juror_positions;
+        app_context.half_fov = half_fov;
+        app_context.window_width = SCREEN_PIXEL_WIDTH;
+        app_context.window_height = SCREEN_PIXEL_HEIGHT;
+
+        const auto juror_a_l = juror_positions.at(cog::Juror_JurorA).first * app_context.window_width;
+        const auto juror_a_r = juror_a_l + 300.f;
+        const auto juror_b_l = juror_positions.at(cog::Juror_JurorB).first * app_context.window_width;
+        const auto juror_b_r = juror_b_l + 350.f;
+        const auto juror_c_l = juror_positions.at(cog::Juror_JurorC).first * app_context.window_width;
+        const auto juror_c_r = juror_c_l + 600.f;
+        const auto jury_foreman_l = juror_positions.at(cog::Juror_JuryForeman).first * app_context.window_width;
+        const auto jury_foreman_r = jury_foreman_l + 600.f;
+        const std::map<cog::Juror, std::pair<double, double>> juror_intervals{
+                {cog::Juror_JurorA,      {juror_a_l,      juror_a_r}},
+                {cog::Juror_JurorB,      {juror_b_l,      juror_b_r}},
+                {cog::Juror_JurorC,      {juror_c_l,      juror_c_r}},
+                {cog::Juror_JuryForeman, {jury_foreman_l, jury_foreman_r}}
+        };
+        app_context.juror_intervals = &juror_intervals;
+        // For non-registered captions, render them at 75% of the window's height.
+        app_context.y = app_context.window_height * 0.6;
+
+        // Let's load the foreground and background colors.
+        app_context.foreground_color = &foreground_color;
+        app_context.background_color = &background_color;
+
+        // Let's initialize SDL
+        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+            printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
+            return 1;
+        }
+        // And initialize SDL_ttf, which will render text on our video frames.
+        if (TTF_Init() == -1) {
+            printf("[ERROR] TTF_Init() Failed with: %s\n", TTF_GetError());
+            exit(2);
+        }
+
+        TTF_Font *smallest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_SMALL);
+        TTF_Font *medium_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_MEDIUM);
+        TTF_Font *largest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_LARGE);
+        app_context.smallest_font = smallest_font;
+        app_context.medium_font = medium_font;
+        app_context.largest_font = largest_font;
+        const std::map<cog::Juror, TTF_Font *> juror_font_sizes{
+                {cog::Juror_JurorA,      medium_font},
+                {cog::Juror_JurorB,      medium_font},
+                {cog::Juror_JuryForeman, medium_font},
+                {cog::Juror_JurorC,      medium_font}
+        };
+        app_context.juror_font_sizes = &juror_font_sizes;
 
 
-    // Lastly, let's initialize SDL_image, which will load images for us.
-    auto flags = IMG_INIT_PNG;
-    if ((IMG_Init(flags) & flags) != flags) {
-        printf("IMG_Init: Failed to init required png support!\n");
-        printf("IMG_Init: %s\n", IMG_GetError());
-    }
+        // Lastly, let's initialize SDL_image, which will load images for us.
+        auto flags = IMG_INIT_PNG;
+        if ((IMG_Init(flags) & flags) != flags) {
+            printf("IMG_Init: Failed to init required png support!\n");
+            printf("IMG_Init: %s\n", IMG_GetError());
+        }
 
-    auto window_pos_x = WINDOW_OFFSET_X;
-    auto window_pos_y = WINDOW_OFFSET_Y;
-    auto displays = SDL_GetNumVideoDisplays();
-    if (displays > 1) {
-        SDL_Rect second_display_bounds{};
-        SDL_GetDisplayBounds(1, &second_display_bounds);
-        window_pos_x = second_display_bounds.x + WINDOW_OFFSET_X;
-        window_pos_y = second_display_bounds.y + WINDOW_OFFSET_Y;
-    }
-    // Create the window that we'll use
-    auto window = SDL_CreateWindow(WINDOW_TITLE, 0, 0,
-                                   app_context.window_width,
-                                   app_context.window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-    if (window == nullptr) {
-        printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
-        return 1;
-    }
-    SDL_SetWindowPosition(window, window_pos_x, window_pos_y);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "Linear");
-    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-    app_context.renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    app_context.texture = SDL_CreateTexture(app_context.renderer, SDL_PIXELFORMAT_BGR565, SDL_TEXTUREACCESS_STREAMING,
-                                            app_context.window_width, app_context.window_height);
-    if (!app_context.texture) {
-        fprintf(stderr, "Couldn't create texture: %s\n", SDL_GetError());
-    }
-    app_context.mutex = SDL_CreateMutex();
+        auto window_pos_x = WINDOW_OFFSET_X;
+        auto window_pos_y = WINDOW_OFFSET_Y;
+        auto displays = SDL_GetNumVideoDisplays();
+        if (displays > 1) {
+            SDL_Rect second_display_bounds{};
+            SDL_GetDisplayBounds(1, &second_display_bounds);
+            window_pos_x = second_display_bounds.x + WINDOW_OFFSET_X;
+            window_pos_y = second_display_bounds.y + WINDOW_OFFSET_Y;
+        }
+        // Create the window that we'll use
+        auto window = SDL_CreateWindow(WINDOW_TITLE, 0, 0,
+                                       app_context.window_width,
+                                       app_context.window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        if (window == nullptr) {
+            printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
+            return 1;
+        }
+        SDL_SetWindowPosition(window, window_pos_x, window_pos_y);
+        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "Linear");
+        SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+        app_context.renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+        app_context.texture = SDL_CreateTexture(app_context.renderer, SDL_PIXELFORMAT_BGR565,
+                                                SDL_TEXTUREACCESS_STREAMING,
+                                                app_context.window_width, app_context.window_height);
+        if (!app_context.texture) {
+            fprintf(stderr, "Couldn't create texture: %s\n", SDL_GetError());
+        }
+        app_context.mutex = SDL_CreateMutex();
 
-    // Load the two indicator images that we'll use to point towards the next speaker.
-    std::string back_arrow_path = "resources/images/arrow_back.png";
-    std::string forward_arrow_path = "resources/images/arrow_forward.png";
-    SDL_Surface *back_arrow = IMG_Load(back_arrow_path.c_str());
-    if (!back_arrow) {
-        printf("IMG_Load: %s\n", IMG_GetError());
-        exit(EXIT_FAILURE);
-    }
-    SDL_Surface *forward_arrow = IMG_Load(forward_arrow_path.c_str());
-    if (!forward_arrow) {
-        printf("IMG_Load: %s\n", IMG_GetError());
-        exit(EXIT_FAILURE);
-    }
-    app_context.back_arrow = back_arrow;
-    app_context.forward_arrow = forward_arrow;
+        // Load the two indicator images that we'll use to point towards the next speaker.
+        std::string back_arrow_path = "resources/images/arrow_back.png";
+        std::string forward_arrow_path = "resources/images/arrow_forward.png";
+        SDL_Surface *back_arrow = IMG_Load(back_arrow_path.c_str());
+        if (!back_arrow) {
+            printf("IMG_Load: %s\n", IMG_GetError());
+            exit(EXIT_FAILURE);
+        }
+        SDL_Surface *forward_arrow = IMG_Load(forward_arrow_path.c_str());
+        if (!forward_arrow) {
+            printf("IMG_Load: %s\n", IMG_GetError());
+            exit(EXIT_FAILURE);
+        }
+        app_context.back_arrow = back_arrow;
+        app_context.forward_arrow = forward_arrow;
 
-    // Now that we've configured our app context, let's get ready to boot up VLC.
-    libvlc_instance_t *libvlc;
-    libvlc_media_t *m;
-    libvlc_media_player_t *mp;
-    char const *vlc_argv[] = {
+        SDL_Rect cali_rect;
+        cali_rect.x = 0;
+        cali_rect.y = 0;
+        cali_rect.w = 32;
+        cali_rect.h = 32;
+
+        // Now that we've configured our app context, let's get ready to boot up VLC.
+        libvlc_instance_t *libvlc;
+        libvlc_media_t *m;
+        libvlc_media_player_t *mp;
+        char const *vlc_argv[] = {
 //            "--no-audio", // Don't play audio.
-            "--no-xlib", // Don't use Xlib.
-    };
-    int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
-    // If you don't have this variable set you must have plugins directory
-    // with the executable or libvlc_new() will not work!
-    printf("VLC_PLUGIN_PATH=%s\n", getenv("VLC_PLUGIN_PATH"));
+                "--no-xlib", // Don't use Xlib.
+        };
+        int vlc_argc = sizeof(vlc_argv) / sizeof(*vlc_argv);
+        // If you don't have this variable set you must have plugins directory
+        // with the executable or libvlc_new() will not work!
+        printf("VLC_PLUGIN_PATH=%s\n", getenv("VLC_PLUGIN_PATH"));
 
-    // Initialise libVLC.
-    libvlc = libvlc_new(vlc_argc, vlc_argv);
-    if (nullptr == libvlc) {
-        printf("LibVLC initialization failure. If on MacOS, make sure that VLC_PLUGIN_PATH is set to the path of the PARENT of the VLC plugin folder");
-        return EXIT_FAILURE;
-    }
+        // Initialise libVLC.
+        libvlc = libvlc_new(vlc_argc, vlc_argv);
+        if (nullptr == libvlc) {
+            printf("LibVLC initialization failure. If on MacOS, make sure that VLC_PLUGIN_PATH is set to the path of the PARENT of the VLC plugin folder");
+            return EXIT_FAILURE;
+        }
 
-    // Let's load the video that we're going to play on VLC
-    std::ostringstream os;
-    os << "resources/videos/main." << video_section << ".mp4";
-    std::string video_path = os.str();
-    m = libvlc_media_new_path(libvlc, video_path.c_str());
-    mp = libvlc_media_player_new_from_media(m);
-    libvlc_media_release(m);
-    libvlc_video_set_callbacks(mp, lock, unlock, display, &app_context);
-    libvlc_video_set_format(mp, "RV16", app_context.window_width, app_context.window_height,
-                            app_context.window_width * 2);
+        // Let's load the video that we're going to play on VLC
+        std::ostringstream os;
+        os << "resources/videos/main." << video_section << ".mp4";
+        std::string video_path = os.str();
+        m = libvlc_media_new_path(libvlc, video_path.c_str());
+        mp = libvlc_media_player_new_from_media(m);
+        libvlc_media_release(m);
+        libvlc_video_set_callbacks(mp, lock, unlock, display, &app_context);
+        libvlc_video_set_format(mp, "RV16", app_context.window_width, app_context.window_height,
+                                app_context.window_width * 2);
 
-    std::mutex azimuth_mutex;
-    app_context.azimuth_mutex = &azimuth_mutex;
-    std::deque<float> azimuth_buffer{};
-    app_context.azimuth_buffer = &azimuth_buffer;
-//    if (presentation_method != CONTROL) {
+        std::mutex azimuth_mutex;
+        app_context.azimuth_mutex = &azimuth_mutex;
+        std::deque<float> azimuth_buffer{};
+        app_context.azimuth_buffer = &azimuth_buffer;
+
         std::thread read_orientation_thread(read_orientation, socket, &cliaddr, &azimuth_mutex,
                                             &azimuth_buffer);
-//    }
 
-    nlohmann::json json;
-    os.str("");
-    os.clear();
-    os << "resources/captions/merged_captions." << video_section << ".json";
-    std::string captions_path = os.str();
-    std::cout << "Captions path = " << captions_path << std::endl;
-    std::ifstream captions_file(captions_path.c_str());
-    captions_file >> json;
-    auto caption_model = CaptionModel();
-    app_context.caption_model = &caption_model;
+        nlohmann::json json;
+        os.str("");
+        os.clear();
+        os << "resources/captions/merged_captions." << video_section << ".json";
+        std::string captions_path = os.str();
+        std::cout << "Captions path = " << captions_path << std::endl;
+        std::ifstream captions_file(captions_path.c_str());
+        captions_file >> json;
+        auto caption_model = CaptionModel(45);
+        app_context.caption_model = &caption_model;
 
-    // Wait for data to start getting transmitted from the phone
-    // before we start playing our video on VLC and rendering captions.
-    bool started = false;
+        // Wait for data to start getting transmitted from the phone
+        // before we start playing our video on VLC and rendering captions.
+        bool started = false;
 
-    SDL_Event event;
-    bool done = false;
-    int action = 0;
-    // Main loop.
-    std::thread play_captions_thread(start_caption_stream, &started, socket, &cliaddr,
-                                     &json,
-                                     &caption_model, presentation_method);
-    SDL_RenderPresent(app_context.renderer);
-    while (!done) {
-        action = 0;
-
-        // Keys: enter (fullscreen), space (pause), escape (quit).
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-                case SDL_QUIT:
+        SDL_Event event;
+        bool done = false;
+        int action = 0;
+        // Main loop.
+        std::thread play_captions_thread(start_caption_stream, &started, socket, &cliaddr,
+                                         &json,
+                                         &caption_model, presentation_method);
+        SDL_RenderPresent(app_context.renderer);
+        while (!done) {
+            action = 0;
+            // Keys: enter (fullscreen), space (pause), escape (quit).
+            while (SDL_PollEvent(&event)) {
+                switch (event.type) {
+                    case SDL_QUIT:
+                        done = true;
+                        break;
+                    case SDL_KEYDOWN:
+                        action = event.key.keysym.sym;
+                        break;
+                    case SDL_WINDOWEVENT:
+                        if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                            SDL_RenderSetViewport(app_context.renderer, nullptr);
+                            app_context.display_rect.w = app_context.window_width = event.window.data1;
+                            app_context.display_rect.h = app_context.window_height = event.window.data2;
+                            app_context.y = app_context.window_height * 0.75;
+                        }
+                        break;
+                }
+            }
+            switch (action) {
+                case SDLK_ESCAPE:
+                case SDLK_q:
                     done = true;
                     break;
-                case SDL_KEYDOWN:
-                    action = event.key.keysym.sym;
-                    break;
-                case SDL_WINDOWEVENT:
-                    if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                        SDL_RenderSetViewport(app_context.renderer, nullptr);
-                        app_context.display_rect.w = app_context.window_width = event.window.data1;
-                        app_context.display_rect.h = app_context.window_height = event.window.data2;
-                        app_context.y = app_context.window_height * 0.75;
+                case SDLK_SPACE:
+                    if (!started) {
+                        started = true;
+                        libvlc_media_player_play(mp);
                     }
+                    break;
+                default:
                     break;
             }
         }
-
-        switch (action) {
-            case SDLK_ESCAPE:
-            case SDLK_q:
-                done = true;
-                break;
-            case SDLK_SPACE:
-                if (!started) {
-                    started = true;
-                    libvlc_media_player_play(mp);
-                }
-                break;
-            default:
-                break;
-        }
-
-        SDL_Delay(1000 / 10);
     }
-    TTF_CloseFont(smallest_font);
-    SDL_DestroyMutex(app_context.mutex);
-    SDL_DestroyRenderer(app_context.renderer);
-    SDL_DestroyWindow(window);
-    IMG_Quit();
-    TTF_Quit();
-    SDL_Quit();
     return 0;
 }

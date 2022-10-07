@@ -15,16 +15,20 @@ class CaptionModel {
 private:
     std::vector<std::pair<cog::Juror, std::string>> spoken_so_far;
     std::mutex text_mutex;
-    const static int LINE_LENGTH = 20;
-
     static std::string wrap(const std::string &text, int line_length);
+    //utable int lineLength;
 
 public:
-    explicit CaptionModel() = default;
+    const static int lineLength = 15;
+    explicit CaptionModel(int ll){
+        //lineLength = ll;
+    };
 
     void add_word(const std::string &new_word, cog::Juror speaker);
 
-    std::pair<cog::Juror, std::string> get_current_text(int line_length = LINE_LENGTH);
+    //void set_line_length(int num);
+
+    std::pair<cog::Juror, std::string> get_current_text(int line_length = lineLength);
 };
 
 cog::Juror juror_from_string(const std::string &juror_str);

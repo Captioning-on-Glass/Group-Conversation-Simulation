@@ -2,6 +2,9 @@
 #include <iostream>
 #include "captions.hpp"
 
+
+
+
 std::string CaptionModel::wrap(const std::string &text, const int line_length) {
     std::istringstream words(text);
     std::vector<std::string> wrapped_lines;

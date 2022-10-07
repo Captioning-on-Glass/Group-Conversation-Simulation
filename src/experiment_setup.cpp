@@ -81,8 +81,7 @@ SDL_Color color_string_to_color(const std::string &color_str) {
     return result;
 }
 
-std::tuple<int, int, int, SDL_Color, SDL_Color, std::string>
-parse_arguments(int argc, char *argv[]) {
+std::tuple<int, int, int, SDL_Color, SDL_Color, std::string> parse_arguments(int argc, char *argv[]) {
     int video_section;
     int presentation_method;
     int half_fov;
@@ -91,6 +90,7 @@ parse_arguments(int argc, char *argv[]) {
     std::string path_to_font;
     int font_size;
     int cmd_opt;
+    int port;
     int option_index = 0;
     std::string fg_color_str;
     std::string bg_color_str;
@@ -136,5 +136,12 @@ parse_arguments(int argc, char *argv[]) {
         }
         cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:", long_options, &option_index);
     }
-    return std::make_tuple(video_section, presentation_method, half_fov, foreground_color, background_color, path_to_font);
+    return std::make_tuple(video_section, presentation_method, half_fov,  foreground_color, background_color, path_to_font);
+
+
+}
+
+std::tuple<int, int, int> calibrate_head_movement() {
+    std::cout << "Calibration Sequence Initiated";
+    return std::make_tuple(1,1,1);
 }

@@ -34,4 +34,6 @@ static struct option long_options[] = {
 std::tuple<int, int, int, SDL_Color, SDL_Color, std::string>
 parse_arguments(int argc, char *argv[]);
 
+std::tuple<int, int, int> calibrate_head_movement();
+
 #endif //COG_GROUP_CONVO_CPP_EXPERIMENT_SETUP_HPP
