@@ -27,7 +27,6 @@ void render_surface_as_texture(SDL_Renderer *renderer, SDL_Surface *surface, SDL
 std::tuple<int, int>
 render_text(SDL_Renderer *renderer, TTF_Font *font, const std::string &text, int x, int y,
             const SDL_Color *foreground_color, const SDL_Color *background_color) {
-    std::cout<<"WRAP LENGTH" <<WRAP_LENGTH;
     auto text_surface = TTF_RenderText_Shaded_Wrapped(font, text.c_str(), *foreground_color,
                                                       *background_color,
                                                       WRAP_LENGTH);
