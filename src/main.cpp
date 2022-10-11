@@ -101,6 +101,28 @@ static void display(void *data, void *id) {
     SDL_RenderCopy(app_context->renderer, app_context->texture, nullptr, &app_context->display_rect);
 }
 
+
+
+SDL_Texture* loadSurface(std::string path, void *data)
+{
+    auto *app_context = (AppContext *) data;
+    SDL_Surface* loaded_surface = IMG_Load(path.c_str());
+    SDL_Texture* new_texture = nullptr;
+    if( loaded_surface == nullptr) {
+        printf("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
+    } else {
+        new_texture = SDL_CreateTextureFromSurface(app_context->renderer, loaded_surface);
+        if(new_texture == nullptr) {
+            printf("Unable to create texture form %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
+        }
+        SDL_FreeSurface(loaded_surface);
+    }
+    return new_texture;
+}
+
+
+
+
 int main(int argc, char *argv[]) {
     // Get command-line arguments, which will be used for configuring how captions are rendered.
     const auto
@@ -210,51 +232,67 @@ int main(int argc, char *argv[]) {
             window_pos_y = second_display_bounds.y + WINDOW_OFFSET_Y;
         }
         // Create the window that we'll use
-        auto window = SDL_CreateWindow(WINDOW_TITLE, 0, 0,
-                                       app_context.window_width,
-                                       app_context.window_height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-        if (window == nullptr) {
+        app_context.window =
+                SDL_CreateWindow(WINDOW_TITLE,
+                               0,
+                               0,
+                               app_context.window_width,
+                               app_context.window_height,
+                               SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+
+        if (app_context.window == nullptr) {
             printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
             return 1;
         }
-        SDL_SetWindowPosition(window, window_pos_x, window_pos_y);
+//        app_context.screen_surface = SDL_GetWindowSurface(app_context.window);
+
+        SDL_SetWindowPosition(app_context.window, window_pos_x, window_pos_y);
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "Linear");
         SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-        app_context.renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-        app_context.texture = SDL_CreateTexture(app_context.renderer, SDL_PIXELFORMAT_BGR565,
-                                                SDL_TEXTUREACCESS_STREAMING,
-                                                app_context.window_width, app_context.window_height);
+
+        app_context.renderer =
+                SDL_CreateRenderer(app_context.window,
+                              -1,
+                              SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+        app_context.texture =
+                SDL_CreateTexture(app_context.renderer,
+                                  SDL_PIXELFORMAT_BGR565,
+                                  SDL_TEXTUREACCESS_STREAMING,
+                                  app_context.window_width,
+                                  app_context.window_height);
+
         if (!app_context.texture) {
             fprintf(stderr, "Couldn't create texture: %s\n", SDL_GetError());
         }
+
         app_context.mutex = SDL_CreateMutex();
 
         // Load the two indicator images that we'll use to point towards the next speaker.
         std::string back_arrow_path = "resources/images/arrow_back.png";
         std::string forward_arrow_path = "resources/images/arrow_forward.png";
+        std::string calibration_background_path = "resources/images/calibration_backdrop.png";
+
         SDL_Surface *back_arrow = IMG_Load(back_arrow_path.c_str());
         if (!back_arrow) {
             printf("IMG_Load: %s\n", IMG_GetError());
             exit(EXIT_FAILURE);
         }
+
         SDL_Surface *forward_arrow = IMG_Load(forward_arrow_path.c_str());
         if (!forward_arrow) {
             printf("IMG_Load: %s\n", IMG_GetError());
             exit(EXIT_FAILURE);
         }
+
         app_context.back_arrow = back_arrow;
         app_context.forward_arrow = forward_arrow;
+        app_context.calibration_backdrop = loadSurface(calibration_background_path, &app_context);
 
-        SDL_Rect cali_rect;
-        cali_rect.x = 0;
-        cali_rect.y = 0;
-        cali_rect.w = 32;
-        cali_rect.h = 32;
 
         // Now that we've configured our app context, let's get ready to boot up VLC.
         libvlc_instance_t *libvlc;
-        libvlc_media_t *m;
-        libvlc_media_player_t *mp;
+        libvlc_media_t *media_path;
+        libvlc_media_player_t *media_player;
         char const *vlc_argv[] = {
 //            "--no-audio", // Don't play audio.
                 "--no-xlib", // Don't use Xlib.
@@ -275,13 +313,12 @@ int main(int argc, char *argv[]) {
         std::ostringstream os;
         os << "resources/videos/main." << video_section << ".mp4";
         std::string video_path = os.str();
-        m = libvlc_media_new_path(libvlc, video_path.c_str());
-        mp = libvlc_media_player_new_from_media(m);
-        libvlc_media_release(m);
-        libvlc_video_set_callbacks(mp, lock, unlock, display, &app_context);
-        libvlc_video_set_format(mp, "RV16", app_context.window_width, app_context.window_height,
+        media_path = libvlc_media_new_path(libvlc, video_path.c_str());
+        media_player = libvlc_media_player_new_from_media(media_path);
+        libvlc_media_release(media_path);
+        libvlc_video_set_callbacks(media_player, lock, unlock, display, &app_context);
+        libvlc_video_set_format(media_player, "RV16", app_context.window_width, app_context.window_height,
                                 app_context.window_width * 2);
-
         std::mutex azimuth_mutex;
         app_context.azimuth_mutex = &azimuth_mutex;
         std::deque<float> azimuth_buffer{};
@@ -304,6 +341,7 @@ int main(int argc, char *argv[]) {
         // Wait for data to start getting transmitted from the phone
         // before we start playing our video on VLC and rendering captions.
         bool started = false;
+        bool calibrated = false;
 
         SDL_Event event;
         bool done = false;
@@ -316,7 +354,8 @@ int main(int argc, char *argv[]) {
         while (!done) {
             action = 0;
             // Keys: enter (fullscreen), space (pause), escape (quit).
-            while (SDL_PollEvent(&event)) {
+            while (SDL_PollEvent(&event))
+            {
                 switch (event.type) {
                     case SDL_QUIT:
                         done = true;
@@ -340,9 +379,12 @@ int main(int argc, char *argv[]) {
                     done = true;
                     break;
                 case SDLK_SPACE:
-                    if (!started) {
+                    if (!calibrated) {
+                        calibrated = true;
+
+                    } else if (!started) {
                         started = true;
-                        libvlc_media_player_play(mp);
+                        libvlc_media_player_play(media_player);
                     }
                     break;
                 default:

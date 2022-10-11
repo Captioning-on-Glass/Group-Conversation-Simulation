@@ -10,7 +10,8 @@ int to_pixels(double inches) {
 
 int angle_to_pixel_position(double angle) {
     const auto position_in_inches = std::tan(angle) * INCHES_FROM_SCREEN;
-    return to_pixels(position_in_inches);
+//    return to_pixels(position_in_inches);
+    return 3840 * tan(angle + PI/2);
 }
 
 double to_radians(double degrees) {
@@ -34,9 +35,11 @@ void read_orientation(int socket, sockaddr_in *client_address, std::mutex *azimu
         }
         auto current_orientation = cog::GetOrientationMessage(buffer.data());
         auto current_azimuth = current_orientation->azimuth();
-        if (current_azimuth < 0) {
-            current_azimuth = current_azimuth + 2 * PI;
-        }
+
+        std::cout<<"Azimuth is: " << current_azimuth << "\n";
+//        if (current_azimuth < 0) {
+//            current_azimuth = current_azimuth + 2 * PI;
+//        }
         orientation_buffer->push_back(current_azimuth);
         azimuth_mutex->unlock();
         if (recvfrom(socket, buffer.data(), buffer.size(),

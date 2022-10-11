@@ -12,6 +12,7 @@
 #include "captions.hpp"
 
 struct AppContext {
+    SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
     SDL_mutex *mutex;
@@ -22,8 +23,10 @@ struct AppContext {
     TTF_Font *largest_font;
     const std::map<cog::Juror, std::pair<double, double>> *juror_positions;
     const std::map<cog::Juror, TTF_Font *> *juror_font_sizes;
+    SDL_Surface *screen_surface;
     SDL_Surface *back_arrow;
     SDL_Surface *forward_arrow;
+    SDL_Texture *calibration_backdrop;
     const SDL_Color *foreground_color;
     const SDL_Color *background_color;
     CaptionModel *caption_model;
