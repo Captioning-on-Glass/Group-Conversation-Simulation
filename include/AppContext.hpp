@@ -35,5 +35,7 @@ struct AppContext {
     int window_height;
     const std::map<cog::Juror, std::pair<double, double>> *juror_intervals;
     int half_fov;
+    float left_bound;
+    float right_bound;
 };
 #endif //COG_GROUP_CONVO_CPP_APPCONTEXT_HPP

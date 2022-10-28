@@ -17,7 +17,25 @@ double to_radians(double degrees) {
     return degrees * PI / 180.f;
 }
 
+double pixel_mapped(double angle, const AppContext *context)
+{
+//    auto *app_context = (AppContext *) data;
 
+    int moving_limiter = 10;
+
+    //previous pixel, check if current pixel is greater then previous pixel + moving_limiter
+    //if true, then we return new pixel, else we return old pixel
+
+
+
+    auto theta_left = context->left_bound;
+    auto theta_right = context->right_bound;
+
+    auto pixel = ( 3840 / ( theta_right - theta_left ) ) * ( angle - theta_left );
+
+    return pixel;
+
+}
 void read_orientation(int socket, sockaddr_in *client_address, std::mutex *azimuth_mutex,
                       std::deque<float> *orientation_buffer) {
     size_t len, num_bytes_read;

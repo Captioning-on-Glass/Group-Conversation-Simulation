@@ -103,6 +103,32 @@ static void display(void *data, void *id) {
     SDL_RenderCopy(app_context->renderer, app_context->texture, nullptr, &app_context->display_rect);
 }
 
+SDL_Texture* load_texture(std::string path, void *data)
+{
+    auto *app_context = (AppContext *) data;
+    //The final texture
+    SDL_Texture* newTexture = nullptr;
+
+    //Load image at specified path
+    SDL_Surface* loadedSurface = IMG_Load( path.c_str() );
+    if( loadedSurface == nullptr )
+    {
+        printf( "Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError() );
+    }
+    else
+    {
+        //Create texture from surface pixels
+        newTexture = SDL_CreateTextureFromSurface( app_context->renderer, loadedSurface );
+        if( newTexture == nullptr )
+        {
+            printf( "Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError() );
+        }
+        //Get rid of old loaded surface
+        SDL_FreeSurface( loadedSurface );
+    }
+    return newTexture;
+}
+
 int main(int argc, char *argv[]) {
     // Get command-line arguments, which will be used for configuring how captions are rendered.
     const auto
@@ -277,8 +303,13 @@ int main(int argc, char *argv[]) {
     std::deque<float> azimuth_buffer{};
     app_context.azimuth_buffer = &azimuth_buffer;
 //    if (presentation_method != CONTROL) {
-        std::thread read_orientation_thread(read_orientation, socket, &cliaddr, &azimuth_mutex,
-                                            &azimuth_buffer);
+        std::thread
+        read_orientation_thread(
+                read_orientation,
+                socket,
+                &cliaddr,
+                &azimuth_mutex,
+                &azimuth_buffer);
 //    }
 
     nlohmann::json json;
@@ -295,14 +326,22 @@ int main(int argc, char *argv[]) {
     // Wait for data to start getting transmitted from the phone
     // before we start playing our video on VLC and rendering captions.
     bool started = false;
-
+    bool calibrating_left = false;
+    bool calibrating_right = false;
     SDL_Event event;
     bool done = false;
     int action = 0;
     // Main loop.
-    std::thread play_captions_thread(start_caption_stream, &started, socket, &cliaddr,
-                                     &json,
-                                     &caption_model, presentation_method);
+    std::thread
+    play_captions_thread(
+            start_caption_stream,
+             &started,
+             socket,
+             &cliaddr,
+             &json,
+             &caption_model,
+             presentation_method);
+
     SDL_RenderPresent(app_context.renderer);
     while (!done) {
         action = 0;
@@ -333,9 +372,44 @@ int main(int argc, char *argv[]) {
                 done = true;
                 break;
             case SDLK_SPACE:
-                if (!started) {
-                    started = true;
-                    libvlc_media_player_play(mp);
+                if (!calibrating_left)
+                {
+                    SDL_RenderClear(app_context.renderer);
+                    SDL_Texture* new_texture =
+                            load_texture("resources/images/calibration_background_left.png",
+                                         &app_context);
+                    SDL_RenderCopy(app_context.renderer,
+                                   new_texture,
+                                   nullptr,
+                                   nullptr);
+                    SDL_RenderPresent(app_context.renderer);
+                    calibrating_left = true;
+                }
+                else if (!calibrating_right)
+                {
+                    auto left_bound = filtered_azimuth(app_context.azimuth_buffer,
+                                                       app_context.azimuth_mutex);
+                    app_context.left_bound = left_bound;
+                    std::cout<<"Left Bound/Offset: " << left_bound << "\n";
+                    SDL_RenderClear(app_context.renderer);
+                    SDL_Texture *new_texture =
+                            load_texture("resources/images/calibration_background_right.png",
+                                         &app_context);
+                    SDL_RenderCopy(app_context.renderer,
+                                   new_texture,
+                                   nullptr,
+                                   nullptr);
+                    SDL_RenderPresent(app_context.renderer);
+                    calibrating_right = true;
+                }
+                else if (!started)
+                {
+                auto right_bound = filtered_azimuth(app_context.azimuth_buffer,
+                                                   app_context.azimuth_mutex);
+                app_context.right_bound = right_bound;
+                std::cout<<"Right Bound: " << app_context.right_bound << "\n";
+                started = true;
+                libvlc_media_player_play(mp);
                 }
                 break;
             default:

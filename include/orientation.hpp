@@ -13,13 +13,15 @@ constexpr double PIXELS_PER_INCH = 100.f /
                                    1.6f; // 100 pixels / 1.6 in (calculated empirically by measuring the width (in inches) of a 100px rectangle, see "ppi" branch)
 //constexpr double PIXELS_PER_INCH = 253.93f;
 constexpr double SCREEN_INCH_WIDTH = (double) SCREEN_PIXEL_WIDTH / PIXELS_PER_INCH;
-constexpr size_t MOVING_AVG_SIZE = 60;
+constexpr size_t MOVING_AVG_SIZE = 500;
 
 constexpr double PI = 3.14159265358979323846;
 
 int to_pixels(double inches);
 
 int angle_to_pixel_position(double angle);
+
+double pixel_mapped(double angle, const AppContext *context);
 
 double to_radians(double degrees);
 

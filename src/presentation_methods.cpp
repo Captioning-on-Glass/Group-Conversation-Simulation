@@ -54,7 +54,8 @@ void render_nonregistered_captions(const AppContext *context) {
 
 void render_nonregistered_captions_with_indicators(const AppContext *context) {
     auto left_x = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
-    const auto adjusted_x = angle_to_pixel_position(left_x) + context->window_width / 3;
+    const auto adjusted_x = pixel_mapped(left_x, context);
+//    const auto adjusted_x = angle_to_pixel_position(left_x) + context->window_width / 3;
     auto[juror, text] = context->caption_model->get_current_text();
     if (text.empty()) {
         return;
