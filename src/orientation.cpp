@@ -4,6 +4,10 @@
 #include "orientation.hpp"
 #include "cog-flatbuffer-definitions/orientation_message_generated.h"
 
+double current_caption_pixel = 0;
+bool is_moving = false;
+const double pixel_jiggle_bound = 200;
+
 int to_pixels(double inches) {
     return inches * PIXELS_PER_INCH;
 }
@@ -19,13 +23,9 @@ double to_radians(double degrees) {
 
 double pixel_mapped(double angle, const AppContext *context)
 {
-//    auto *app_context = (AppContext *) data;
-
-    int moving_limiter = 10;
-
     //previous pixel, check if current pixel is greater then previous pixel + moving_limiter
     //if true, then we return new pixel, else we return old pixel
-
+    // TODO: stop "jiggle" by not changing the pixel, unless the angle has changed a certain ammount
 
 
     auto theta_left = context->left_bound;
@@ -33,7 +33,23 @@ double pixel_mapped(double angle, const AppContext *context)
 
     auto pixel = ( 3840 / ( theta_right - theta_left ) ) * ( angle - theta_left );
 
-    return pixel;
+    printf("angle: %f\n", angle);
+    printf("current caption pixel: %f\n", current_caption_pixel);
+    printf("pixel: %f\n", pixel);
+
+    if (current_caption_pixel + pixel_jiggle_bound < pixel or pixel < current_caption_pixel - pixel_jiggle_bound) {
+        current_caption_pixel = pixel;
+        //is_moving = true;
+        return pixel;
+    } else {
+        //if(is_moving){
+        //    current_caption_pixel = pixel;
+        //    is_moving = true;
+        //    return pixel;
+        //}
+        //is_moving = false;
+        return current_caption_pixel;
+    }
 
 }
 void read_orientation(int socket, sockaddr_in *client_address, std::mutex *azimuth_mutex,
