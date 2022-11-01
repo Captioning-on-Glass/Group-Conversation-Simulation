@@ -423,6 +423,15 @@ int main(int argc, char *argv[]) {
                 app_context.right_bound = right_bound;
                 std::cout<<"Right Bound: " << app_context.right_bound << "\n";
                 started = true;
+
+                int c = (3840 * PI) / ( 180 * abs(app_context.left_bound - app_context.right_bound));
+
+                app_context.FOV_pixel_width[0] = c * FOVs[0];
+                app_context.FOV_pixel_width[1] = c * FOVs[1];
+                app_context.FOV_pixel_width[2] = c * FOVs[2];
+                app_context.FOV_pixel_width[3] = c * FOVs[3];
+
+
                 libvlc_media_player_play(mp);
                 }
                 break;
