@@ -31,11 +31,11 @@ double pixel_mapped(double angle, const AppContext *context)
     auto theta_left = context->left_bound;
     auto theta_right = context->right_bound;
 
-    auto pixel = ( 3840 / ( theta_right - theta_left ) ) * ( angle - theta_left );
+    int pixel = ( 3840 / ( theta_right - theta_left ) ) * ( angle - theta_left );
 
-    printf("angle: %f\n", angle);
-    printf("current caption pixel: %f\n", current_caption_pixel);
-    printf("pixel: %f\n", pixel);
+//    printf("angle: %f\n", angle);
+//    printf("current caption pixel: %f\n", current_caption_pixel);
+//    printf("pixel: %f\n", pixel);
 
     if (current_caption_pixel + pixel_jiggle_bound < pixel or pixel < current_caption_pixel - pixel_jiggle_bound) {
         current_caption_pixel = pixel;
