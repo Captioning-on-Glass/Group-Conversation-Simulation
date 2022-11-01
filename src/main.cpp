@@ -33,6 +33,12 @@
 #define WINDOW_OFFSET_Y 292
 
 
+int FOVs[4] = {5,10,15,20};
+
+int get_half_fov(int counter) {
+    return FOVs[counter];
+}
+
 /**
  * This function is called prior to VLC rendering a video frame.
  * What we do here is lock our mutex (preventing other threads from touching the texture), and lock the texture from being
@@ -332,6 +338,7 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
     bool done = false;
     int action = 0;
+    int counter = 1;
     // Main loop.
     std::thread
     play_captions_thread(
@@ -368,6 +375,12 @@ int main(int argc, char *argv[]) {
         }
 
         switch (action) {
+            case SDLK_n:
+                app_context.half_fov = get_half_fov(counter);
+                counter != 4 ? counter++ : counter = 0;
+                std::cout << "Current count: " << counter << "\n";
+                std::cout << "Current fov: " << app_context.half_fov << "\n";
+                break;
             case SDLK_ESCAPE:
             case SDLK_q:
                 done = true;
