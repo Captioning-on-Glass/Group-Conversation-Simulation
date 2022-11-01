@@ -24,10 +24,17 @@ void render_surface_as_texture(SDL_Renderer *renderer, SDL_Surface *surface, SDL
     SDL_DestroyTexture(texture);
 }
 
-std::tuple<int, int>
-render_text(SDL_Renderer *renderer, TTF_Font *font, const std::string &text, int x, int y,
-            const SDL_Color *foreground_color, const SDL_Color *background_color) {
-    auto text_surface = TTF_RenderText_Shaded_Wrapped(font, text.c_str(), *foreground_color,
+std::tuple<int, int> render_text(SDL_Renderer *renderer,
+                                 TTF_Font *font,
+                                 const std::string &text,
+                                 int x,
+                                 int y,
+                                 const SDL_Color *foreground_color,
+                                 const SDL_Color *background_color)
+{
+    auto text_surface = TTF_RenderText_Shaded_Wrapped(font,
+                                                      text.c_str(),
+                                                      *foreground_color,
                                                       *background_color,
                                                       WRAP_LENGTH);
     int w = text_surface->w;
@@ -40,12 +47,11 @@ render_text(SDL_Renderer *renderer, TTF_Font *font, const std::string &text, int
 
 
 void render_nonregistered_captions(const AppContext *context) {
+    auto[juror, text] = context->caption_model->get_current_text();
+    if (text.empty()) return;
+
     auto left_x = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
     const auto adjusted_x = angle_to_pixel_position(left_x) + context->window_width / 3;
-    auto[juror, text] = context->caption_model->get_current_text();
-    if (text.empty()) {
-        return;
-    }
     render_text(context->renderer, context->medium_font, text, adjusted_x, context->y,
                 context->foreground_color,
                 context->background_color);
@@ -53,20 +59,27 @@ void render_nonregistered_captions(const AppContext *context) {
 
 
 void render_nonregistered_captions_with_indicators(const AppContext *context) {
+
+    auto[juror, text] = context->caption_model->get_current_text();
+    if ( text.empty() ) return;
+
     auto left_x = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
     const auto adjusted_x = pixel_mapped(left_x, context);
-//    const auto adjusted_x = angle_to_pixel_position(left_x) + context->window_width / 3;
-    auto[juror, text] = context->caption_model->get_current_text();
-    if (text.empty()) {
-        return;
-    }
-    const auto[text_width, text_height] = render_text(context->renderer,
-                                                      context->medium_font, text, adjusted_x,
-                                                      context->y,
-                                                      context->foreground_color, context->background_color);
+
+    const auto[text_width, text_height] =
+            render_text(context->renderer,
+                              context->medium_font,
+                              text,
+                              adjusted_x,
+                              context->y,
+                              context->foreground_color,
+                              context->background_color);
+
     bool should_show_forward_arrow = false;
     bool should_show_back_arrow = false;
     const auto[left, right] = context->juror_intervals->at(juror);
+
+
     if ((adjusted_x + text_width / 2) < left) {
         should_show_forward_arrow = true;
     } else if ((adjusted_x + text_width / 2) > right) {
@@ -85,8 +98,15 @@ void render_nonregistered_captions_with_indicators(const AppContext *context) {
     if (!(should_show_back_arrow || should_show_forward_arrow)) {
         return;
     }
-    auto destination_rect = SDL_Rect{arrow_x, context->y, arrow_surface->w, arrow_surface->h};
-    render_surface_as_texture(context->renderer, arrow_surface, nullptr, &destination_rect);
+    auto destination_rect = SDL_Rect{arrow_x,
+                                     context->y,
+                                     arrow_surface->w,
+                                     arrow_surface->h};
+
+    render_surface_as_texture(context->renderer,
+                              arrow_surface,
+                              nullptr,
+                              &destination_rect);
 }
 
 void render_registered_captions(const AppContext *context) {
