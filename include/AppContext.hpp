@@ -38,5 +38,6 @@ struct AppContext {
     float left_bound;
     float right_bound;
     int FOV_pixel_width[4] = {0,0,0,0};
+    int fov_index;
 };
 #endif //COG_GROUP_CONVO_CPP_APPCONTEXT_HPP

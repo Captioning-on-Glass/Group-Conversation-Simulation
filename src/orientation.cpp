@@ -90,7 +90,6 @@ double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_m
     double average_azimuth =
             std::accumulate(azimuth_buffer->begin(), azimuth_buffer->end(), 0.0) /
             azimuth_buffer->size();
-//    double median_azimuth = median(azimuth_buffer);
     auto angle = average_azimuth;
     azimuth_mutex->unlock();
     return angle;

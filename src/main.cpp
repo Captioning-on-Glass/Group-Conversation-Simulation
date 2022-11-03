@@ -33,7 +33,7 @@
 #define WINDOW_OFFSET_Y 292
 
 
-int FOVs[4] = {5,10,15,20};
+int FOVs[4] = {10,20,30,40};
 
 int get_half_fov(int counter) {
     return FOVs[counter];
@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
     bool done = false;
     int action = 0;
-    int counter = 1;
+    int counter = 0;
     // Main loop.
     std::thread
     play_captions_thread(
@@ -378,8 +378,7 @@ int main(int argc, char *argv[]) {
             case SDLK_n:
                 app_context.half_fov = get_half_fov(counter);
                 counter != 4 ? counter++ : counter = 0;
-                std::cout << "Current count: " << counter << "\n";
-                std::cout << "Current fov: " << app_context.half_fov << "\n";
+                app_context.fov_index = counter;
                 break;
             case SDLK_ESCAPE:
             case SDLK_q:
@@ -424,7 +423,7 @@ int main(int argc, char *argv[]) {
                 std::cout<<"Right Bound: " << app_context.right_bound << "\n";
                 started = true;
 
-                int c = (3840 * PI) / ( 180 * abs(app_context.left_bound - app_context.right_bound));
+                int c = 3840/80;
 
                 app_context.FOV_pixel_width[0] = c * FOVs[0];
                 app_context.FOV_pixel_width[1] = c * FOVs[1];
