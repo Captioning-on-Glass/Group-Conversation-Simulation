@@ -28,6 +28,11 @@ double to_radians(double degrees);
 void read_orientation(int socket, sockaddr_in *client_address, std::mutex *azimuth_mutex,
                       std::deque<float> *orientation_buffer);
 
+float current_orientation(int socket, sockaddr_in *client_address, std::mutex *azimuth_mutex,
+                         std::deque<float> *orientation_buffer);
+
 double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex);
+
+double exponential_filtered_azimuth(std::deque<float> *azimuth_buffer,  std::mutex *azimuth_mutex);
 
 #endif //COG_GROUP_CONVO_CPP_ORIENTATION_HPP

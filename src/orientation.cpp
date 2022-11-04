@@ -6,7 +6,9 @@
 
 double current_caption_pixel = 0;
 bool is_moving = false;
-const double pixel_jiggle_bound = 200;
+const double pixel_jiggle_bound = 50;
+double prev_filtered_angle = 0;
+double alpha = 0.1;
 
 int to_pixels(double inches) {
     return inches * PIXELS_PER_INCH;
@@ -49,6 +51,7 @@ double pixel_mapped(double angle, const AppContext *context)
         //}
         //is_moving = false;
         return current_caption_pixel;
+//        return pixel;
     }
 
 }
@@ -81,6 +84,39 @@ void read_orientation(int socket, sockaddr_in *client_address, std::mutex *azimu
     }
 }
 
+float current_orientation(int socket, sockaddr_in *client_address, std::mutex *azimuth_mutex,
+                      std::deque<float> *orientation_buffer) {
+    size_t len, num_bytes_read;
+    std::array<char, 256> buffer{};
+    len = sizeof(*client_address);
+
+    num_bytes_read = recvfrom(socket, buffer.data(), buffer.size(),
+                              0, (struct sockaddr *) &(*client_address),
+                              reinterpret_cast<socklen_t *>(&len));
+    float current_azimuth;
+
+    while (num_bytes_read != -1) {
+        azimuth_mutex->lock();
+        if (orientation_buffer->size() == MOVING_AVG_SIZE) {
+            orientation_buffer->pop_front();
+        }
+        auto current_orientation = cog::GetOrientationMessage(buffer.data());
+        current_azimuth = current_orientation->azimuth();
+        if (current_azimuth < 0) {
+            current_azimuth = current_azimuth + 2 * PI;
+        }
+        orientation_buffer->push_back(current_azimuth);
+        azimuth_mutex->unlock();
+        if (recvfrom(socket, buffer.data(), buffer.size(),
+                     0, (struct sockaddr *) &(*client_address),
+                     reinterpret_cast<socklen_t *>(&len)) < 0) {
+            std::cerr << "recvfrom failed: " << strerror(errno) << std::endl;
+        }
+    }
+
+    return current_azimuth;
+}
+
 double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) {
     azimuth_mutex->lock();
     if (azimuth_buffer->empty()) {
@@ -93,4 +129,17 @@ double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_m
     auto angle = average_azimuth;
     azimuth_mutex->unlock();
     return angle;
+}
+
+double exponential_filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) { // todo current_orientatoin?
+    azimuth_mutex->lock();
+
+    double current_angle = azimuth_buffer->back(); // todo is this supposed to be front or back?
+
+    double filtered_current_angle = current_angle * alpha + prev_filtered_angle * (1 - alpha);
+    prev_filtered_angle = filtered_current_angle;
+
+    azimuth_mutex->unlock();
+
+    return filtered_current_angle;
 }
