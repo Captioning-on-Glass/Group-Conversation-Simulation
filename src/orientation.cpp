@@ -50,8 +50,8 @@ double pixel_mapped(double angle, const AppContext *context)
         //    return pixel;
         //}
         //is_moving = false;
-        return current_caption_pixel;
-//        return pixel;
+//        return current_caption_pixel;
+        return pixel;
     }
 
 }
