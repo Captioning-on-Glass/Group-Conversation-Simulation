@@ -32,7 +32,7 @@ std::tuple<int, int> render_text(SDL_Renderer *renderer, TTF_Font *font, const s
                                                       text.c_str(),
                                                       *foreground_color,
                                                       *background_color,
-                                                      WRAP_LENGTH);
+                                                      640);
     int w = text_surface->w;
     int h = text_surface->h;
     auto destination_rect = SDL_Rect{x, y, w, h};
