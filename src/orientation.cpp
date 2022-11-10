@@ -58,6 +58,7 @@ double pixel_mapped(double angle, const AppContext *context)
 //    }
 
 }
+
 void read_orientation(int socket, sockaddr_in *client_address, std::mutex *azimuth_mutex,
                       std::deque<float> *orientation_buffer) {
     size_t len, num_bytes_read;
