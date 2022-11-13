@@ -128,18 +128,19 @@ float current_orientation(int socket, sockaddr_in *client_address, std::mutex *a
     return current_azimuth;
 }
 
-double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) {
-    azimuth_mutex->lock();
-    if (azimuth_buffer->empty()) {
+double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex)
+{
+    bool buffer_has_content = !azimuth_buffer->empty();
+    double filtered_angle = 0.0;
+
+    if (buffer_has_content)
+    {
+        azimuth_mutex->lock();
+        filtered_angle = get_average_of(azimuth_buffer, azimuth_mutex);
         azimuth_mutex->unlock();
-        return 0;
     }
-    double average_azimuth = get_average_of(azimuth_buffer, azimuth_mutex);
-    auto angle = average_azimuth;
-    azimuth_mutex->unlock();
-//    printf("avg: ");
-//    printf("%d\n", average_azimuth);
-    return angle;
+
+    return filtered_angle;
 }
 
 
