@@ -134,9 +134,7 @@ double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_m
         azimuth_mutex->unlock();
         return 0;
     }
-    double average_azimuth =
-            std::accumulate(azimuth_buffer->begin(), azimuth_buffer->end(), 0.0) /
-            azimuth_buffer->size();
+    double average_azimuth = get_average_of(azimuth_buffer, azimuth_mutex);
     auto angle = average_azimuth;
     azimuth_mutex->unlock();
 //    printf("avg: ");
