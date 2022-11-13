@@ -155,18 +155,18 @@ bool far_enough(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) {
 }
 
 
-double exponential_filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) { // todo current_orientatoin?
-    bool far_enuf = far_enough(azimuth_buffer, azimuth_mutex);
-    azimuth_mutex->lock();
+double exponential_filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) // todo current_orientatoin?
+{
+    bool significant_movement_detected = far_enough(azimuth_buffer, azimuth_mutex);
+    double filtered_current_angle = 0.0;
 
-    double current_angle = azimuth_buffer->back(); // todo is this supposed to be front or back?
-//    if (far_enuf) {
-        double filtered_current_angle = current_angle * alpha + prev_filtered_angle * (1 - alpha); //todo put back to prev_filtered_angle
+    if (significant_movement_detected)
+    {
+        azimuth_mutex->lock();
+        double current_angle = azimuth_buffer->back();// todo is this supposed to be front or back?
+        filtered_current_angle = ( current_angle * alpha ) + ( prev_filtered_angle * ( 1 - alpha ) );//todo put back to prev_filtered_angle
         prev_filtered_angle = filtered_current_angle;
-
         azimuth_mutex->unlock();
-
-//        printf("Exp: %d\n", filtered_current_angle);
-        return filtered_current_angle;
-//    } else {azimuth_mutex->unlock(); return prev_filtered_angle;}
+    }
+    return filtered_current_angle;
 }
