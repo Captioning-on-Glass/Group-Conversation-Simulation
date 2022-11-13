@@ -6,7 +6,7 @@
 #include <SDL_ttf.h>
 #include "AppContext.hpp"
 
-constexpr int WRAP_LENGTH = 0;
+constexpr int WRAP_LENGTH = 0;// this is pixel width of the caption TODO laird look at this
 //constexpr int HALF_FOV = 40;
 
 /**

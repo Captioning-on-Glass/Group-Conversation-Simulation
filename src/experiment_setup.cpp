@@ -24,7 +24,6 @@ void print_connection_qr(int presentation_method, int port) {
             std::string interface = std::string(ifa->ifa_name);
             if (interface == "wlp3s0" || interface == "wlan0" || interface == "en0" || interface == "en1") {
                 std::ostringstream command;
-
                 std::string address = std::string(addr);
                 std::string address_port = address + ":" + std::to_string(port);
                 command << "qrencode -t ANSI \"" << addr << ":" << port << " " << presentation_method << "\"";

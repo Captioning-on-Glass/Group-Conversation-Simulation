@@ -208,12 +208,21 @@ int main(int argc, char *argv[]) {
         exit(2);
     }
 
+    printf("%s\n", path_to_font.c_str());
+
     TTF_Font *smallest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_SMALL);
     TTF_Font *medium_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_MEDIUM);
+    if(!smallest_font) {
+        printf("%s\n", TTF_GetError());
+        printf("unable to load font\n");
+        exit(1);
+    }
+
     TTF_Font *largest_font = TTF_OpenFont(path_to_font.c_str(), FONT_SIZE_LARGE);
     app_context.smallest_font = smallest_font;
     app_context.medium_font = medium_font;
     app_context.largest_font = largest_font;
+
     const std::map<cog::Juror, TTF_Font *> juror_font_sizes{
             {cog::Juror_JurorA,      medium_font},
             {cog::Juror_JurorB,      medium_font},

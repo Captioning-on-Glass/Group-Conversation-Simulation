@@ -1,7 +1,6 @@
 //
 // Created by quontas on 3/7/22.
 //
-
 #ifndef COG_GROUP_CONVO_CPP_CAPTIONS_HPP
 #define COG_GROUP_CONVO_CPP_CAPTIONS_HPP
 
@@ -15,7 +14,7 @@ class CaptionModel {
 private:
     std::vector<std::pair<cog::Juror, std::string>> spoken_so_far;
     std::mutex text_mutex;
-    const static int LINE_LENGTH = 20;
+    const static int LINE_LENGTH = 29; // max num of charachters on the top line (if more charachters, it just goes to the second line) todo laird default was 20
 
     static std::string wrap(const std::string &text, int line_length);
 
