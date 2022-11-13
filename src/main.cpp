@@ -412,7 +412,6 @@ int main(int argc, char *argv[]) {
                     auto left_bound = filtered_azimuth(app_context.azimuth_buffer,
                                                        app_context.azimuth_mutex);
                     app_context.left_bound = left_bound;
-                    std::cout<<"Left Bound/Offset: " << left_bound << "\n";
                     SDL_RenderClear(app_context.renderer);
                     SDL_Texture *new_texture =
                             load_texture("resources/images/calibration_background_right.png",
@@ -429,17 +428,7 @@ int main(int argc, char *argv[]) {
                 auto right_bound = filtered_azimuth(app_context.azimuth_buffer,
                                                    app_context.azimuth_mutex);
                 app_context.right_bound = right_bound;
-                std::cout<<"Right Bound: " << app_context.right_bound << "\n";
                 started = true;
-
-                int c = 3840/80;
-
-                app_context.FOV_pixel_width[0] = c * FOVs[0];
-                app_context.FOV_pixel_width[1] = c * FOVs[1];
-                app_context.FOV_pixel_width[2] = c * FOVs[2];
-                app_context.FOV_pixel_width[3] = c * FOVs[3];
-
-
                 libvlc_media_player_play(mp);
                 }
                 break;
