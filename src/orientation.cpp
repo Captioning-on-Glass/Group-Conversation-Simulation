@@ -6,9 +6,9 @@
 
 double current_caption_pixel = 0;
 bool is_moving = false;
-const double pixel_jiggle_bound = 75;
+const double PIXEL_JIGGLE_THRESHOLD = 75;
 double prev_filtered_angle = 0;
-double alpha = 0.1;
+double ALPHA = 0.1;
 
 int to_pixels(double inches) {
     return inches * PIXELS_PER_INCH;
@@ -17,6 +17,13 @@ int to_pixels(double inches) {
 int angle_to_pixel_position(double angle) {
     const auto position_in_inches = std::tan(angle) * INCHES_FROM_SCREEN;
     return to_pixels(position_in_inches);
+}
+
+double get_average_of(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex)
+{
+    double sum = std::accumulate(azimuth_buffer->begin(), azimuth_buffer->end(), 0.0);
+    double n = azimuth_buffer->size();
+    return sum / n;
 }
 
 double to_radians(double degrees) {
@@ -41,7 +48,7 @@ double pixel_mapped(double angle, const AppContext *context)
 //    filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex)
 
 
-//    if (current_caption_pixel + pixel_jiggle_bound < pixel or pixel < current_caption_pixel - pixel_jiggle_bound) {
+//    if (current_caption_pixel + PIXEL_JIGGLE_THRESHOLD < pixel or pixel < current_caption_pixel - PIXEL_JIGGLE_THRESHOLD) {
 //        current_caption_pixel = pixel;
         //is_moving = true;
         return pixel;
@@ -137,23 +144,25 @@ double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_m
     return angle;
 }
 
-bool far_enough(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) {
-    azimuth_mutex->lock();
-    if (azimuth_buffer->empty()) {
+
+bool far_enough(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex)
+{
+    bool significant_movement = false;
+    bool buffer_has_content = !azimuth_buffer->empty();
+    double average_azimuth;
+    double delta_azimuth;
+
+    if (buffer_has_content)
+    {
+        azimuth_mutex->lock();
+        average_azimuth = get_average_of(azimuth_buffer, azimuth_mutex);
+        delta_azimuth = average_azimuth - azimuth_buffer->back();
+        significant_movement = delta_azimuth > PIXEL_JIGGLE_THRESHOLD;
+        std::cout<< delta_azimuth;
         azimuth_mutex->unlock();
-        return 0;
     }
-    double average_azimuth =
-            std::accumulate(azimuth_buffer->begin(), azimuth_buffer->end(), 0.0) /
-            azimuth_buffer->size();
-    azimuth_mutex->unlock();
-    printf("%d\n", average_azimuth - azimuth_buffer->back());
-    if (average_azimuth - azimuth_buffer->back()>75) {
-        return true;} else {return false;}
-
-
+    return significant_movement;
 }
-
 
 double exponential_filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex) // todo current_orientatoin?
 {
@@ -164,7 +173,7 @@ double exponential_filtered_azimuth(std::deque<float> *azimuth_buffer, std::mute
     {
         azimuth_mutex->lock();
         double current_angle = azimuth_buffer->back();// todo is this supposed to be front or back?
-        filtered_current_angle = ( current_angle * alpha ) + ( prev_filtered_angle * ( 1 - alpha ) );//todo put back to prev_filtered_angle
+        filtered_current_angle = (current_angle * ALPHA ) + (prev_filtered_angle * (1 - ALPHA ) );//todo put back to prev_filtered_angle
         prev_filtered_angle = filtered_current_angle;
         azimuth_mutex->unlock();
     }
