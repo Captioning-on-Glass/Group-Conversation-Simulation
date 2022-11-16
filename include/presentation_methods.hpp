@@ -9,6 +9,7 @@
 constexpr int WRAP_LENGTH = 0;// this is pixel width of the caption TODO laird look at this
 //constexpr int HALF_FOV = 40;
 
+
 /**
  * Return the intersection between two SDL_Rects as another SDL_Rect. If there is no intersection, return nullopt
  * @param a

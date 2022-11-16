@@ -1,6 +1,9 @@
 #include <iostream>
 #include "presentation_methods.hpp"
 #include "orientation.hpp"
+std::deque<int> pixel_buffer;
+int MA = 30;
+
 
 std::optional<SDL_Rect> rectangle_intersection(const SDL_Rect *a, const SDL_Rect *b) {
     int intersection_tl_x = std::max(a->x, b->x);
@@ -38,8 +41,6 @@ std::tuple<int, int> render_text(SDL_Renderer *renderer, TTF_Font *font, const s
     auto destination_rect = SDL_Rect{x, y, w, h};
     render_surface_as_texture(renderer, text_surface, nullptr, &destination_rect);
     SDL_FreeSurface(text_surface);
-
-    std::cout<<"Width: " << w << "\n";
     return std::make_tuple(w, h);
 }
 
@@ -55,18 +56,18 @@ void render_nonregistered_captions(const AppContext *context) {
                 context->background_color);
 }
 
-
 void render_nonregistered_captions_with_indicators(const AppContext *context) {
 
     auto[juror, text] = context->caption_model->get_current_text();
     if ( text.empty() ) return;
 
-//    auto left_x = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
+    auto left_x = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
 
-    auto left_x = exponential_filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
-
-    const auto adjusted_x = pixel_mapped(left_x, context);
-
+//    auto left_x = exponential_filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
+    if (pixel_buffer.size() == MA) pixel_buffer.pop_front();
+    auto adjusted_x = pixel_mapped(left_x, context);
+    pixel_buffer.push_back(adjusted_x);
+    adjusted_x = std::accumulate(pixel_buffer.begin(), pixel_buffer.end(), 0.0) / pixel_buffer.size();
     const auto[text_width, text_height] =
     render_text(context->renderer,
                 context->medium_font,

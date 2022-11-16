@@ -5,10 +5,11 @@
 #include "cog-flatbuffer-definitions/orientation_message_generated.h"
 
 double current_caption_pixel = 0;
-bool is_moving = false;
-const double PIXEL_JIGGLE_THRESHOLD = 75;
+bool bounds_recorded = false;
+const double PIXEL_JIGGLE_THRESHOLD = 500;
 double prev_filtered_angle = 0;
 double alpha = 0.1;
+double theta_left, theta_right;
 
 int to_pixels(double inches) {
     return inches * PIXELS_PER_INCH;
@@ -36,12 +37,25 @@ double pixel_mapped(double angle, const AppContext *context)
     //if true, then we return new pixel, else we return old pixel
     // TODO: stop "jiggle" by not changing the pixel, unless the angle has changed a certain ammount
 
+    if (!bounds_recorded)
+    {
+        theta_left = context->left_bound;
+        theta_right = context->right_bound;
+        bounds_recorded = true;
+    }
 
-    auto theta_left = context->left_bound;
-    auto theta_right = context->right_bound;
 
     int pixel = ( 3840 / ( theta_right - theta_left ) ) * ( angle - theta_left );
+    int avg_pixel = ( 3840 / ( theta_right - theta_left ) ) * (get_average_of(context->azimuth_buffer, context->azimuth_mutex) - theta_left );
 
+    if (abs(pixel - avg_pixel) > PIXEL_JIGGLE_THRESHOLD)
+    {
+        return pixel;
+    }
+    else
+    {
+        return avg_pixel;
+    }
 //    printf("angle: %f\n", angle);
 //    printf("current caption pixel: %f\n", current_caption_pixel);
 //    printf("pixel: %f\n", pixel);
@@ -140,6 +154,11 @@ double filtered_azimuth(std::deque<float> *azimuth_buffer, std::mutex *azimuth_m
     return angle;
 }
 
+int get_pixel(double angle)
+{
+    return ( 3840 / ( theta_right - theta_left ) ) * ( angle - theta_left );
+}
+
 bool far_enough(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex)
 {
     bool significant_movement = false;
@@ -151,9 +170,8 @@ bool far_enough(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mutex)
     {
         azimuth_mutex->lock();
         average_azimuth = get_average_of(azimuth_buffer, azimuth_mutex);
-        delta_azimuth = average_azimuth - azimuth_buffer->back();
-        significant_movement = delta_azimuth > PIXEL_JIGGLE_THRESHOLD;
-        std::cout<< delta_azimuth;
+        int delta_pixel = get_pixel(average_azimuth) - get_pixel(azimuth_buffer->back());
+        significant_movement = delta_pixel  > PIXEL_JIGGLE_THRESHOLD;
         azimuth_mutex->unlock();
     }
     return significant_movement;
