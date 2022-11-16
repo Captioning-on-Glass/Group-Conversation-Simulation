@@ -344,6 +344,8 @@ int main(int argc, char *argv[]) {
     bool started = false;
     bool calibrating_left = false;
     bool calibrating_right = false;
+    bool calibrating_top = false;
+    bool calibrating_bottom = false;
     SDL_Event event;
     bool done = false;
     int action = 0;
@@ -384,11 +386,6 @@ int main(int argc, char *argv[]) {
         }
 
         switch (action) {
-            case SDLK_n:
-                app_context.half_fov = get_half_fov(counter);
-                counter != 4 ? counter++ : counter = 0;
-                app_context.fov_index = counter;
-                break;
             case SDLK_ESCAPE:
             case SDLK_q:
                 done = true;
@@ -409,10 +406,8 @@ int main(int argc, char *argv[]) {
                 }
                 else if (!calibrating_right)
                 {
-                    auto left_bound = filtered_azimuth(app_context.azimuth_buffer,
+                    app_context.left_bound = filtered_azimuth(app_context.azimuth_buffer,
                                                        app_context.azimuth_mutex);
-                    app_context.left_bound = left_bound;
-                    std::cout<<"Left Bound/Offset: " << left_bound << "\n";
                     SDL_RenderClear(app_context.renderer);
                     SDL_Texture *new_texture =
                             load_texture("resources/images/calibration_background_right.png",
@@ -424,22 +419,44 @@ int main(int argc, char *argv[]) {
                     SDL_RenderPresent(app_context.renderer);
                     calibrating_right = true;
                 }
+                else if (!calibrating_top)
+                {
+                    app_context.right_bound = filtered_azimuth(app_context.azimuth_buffer,
+                                                       app_context.azimuth_mutex);
+                    SDL_RenderClear(app_context.renderer);
+                    SDL_Texture *new_texture =
+                            load_texture("resources/images/calibration_background_top.png",
+                                         &app_context);
+                    SDL_RenderCopy(app_context.renderer,
+                                   new_texture,
+                                   nullptr,
+                                   nullptr);
+                    SDL_RenderPresent(app_context.renderer);
+                    calibrating_top = true;
+                }
+                else if (!calibrating_bottom)
+                {
+                    app_context.top_bound = filtered_pitch(app_context.azimuth_mutex);
+                    SDL_RenderClear(app_context.renderer);
+                    SDL_Texture *new_texture =
+                            load_texture("resources/images/calibration_background_bottom.png",
+                                         &app_context);
+                    SDL_RenderCopy(app_context.renderer,
+                                   new_texture,
+                                   nullptr,
+                                   nullptr);
+                    SDL_RenderPresent(app_context.renderer);
+                    calibrating_bottom = true;
+                }
                 else if (!started)
                 {
-                auto right_bound = filtered_azimuth(app_context.azimuth_buffer,
-                                                   app_context.azimuth_mutex);
-                app_context.right_bound = right_bound;
-                std::cout<<"Right Bound: " << app_context.right_bound << "\n";
+                app_context.bottom_bound = filtered_pitch(app_context.azimuth_mutex);
                 started = true;
-
-                int c = 3840/80;
-
-                app_context.FOV_pixel_width[0] = c * FOVs[0];
-                app_context.FOV_pixel_width[1] = c * FOVs[1];
-                app_context.FOV_pixel_width[2] = c * FOVs[2];
-                app_context.FOV_pixel_width[3] = c * FOVs[3];
-
-
+                printf("Right Bound: %f \n Left Bound: %f \n Top Bound: %f \n Bottom Bound: %f \n",
+                       app_context.right_bound,
+                       app_context.left_bound,
+                       app_context.top_bound,
+                       app_context.bottom_bound);
                 libvlc_media_player_play(mp);
                 }
                 break;
