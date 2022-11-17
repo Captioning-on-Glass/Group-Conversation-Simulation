@@ -20,7 +20,7 @@ int to_pixels(double inches);
 int angle_to_pixel_position(double angle);
 
 double pixel_mapped(double angle, const AppContext *context);
-
+double pixel_mapped_y(double angle, const AppContext *context);
 double to_radians(double degrees);
 
 void read_orientation(int socket, sockaddr_in *client_address, std::mutex *azimuth_mutex,

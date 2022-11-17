@@ -1,8 +1,9 @@
 #include <iostream>
 #include "presentation_methods.hpp"
 #include "orientation.hpp"
-std::deque<int> pixel_buffer;
-int MA = 30;
+std::deque<int> pixel_buffer_x;
+std::deque<int> pixel_buffer_y;
+int MA = 20;
 
 
 std::optional<SDL_Rect> rectangle_intersection(const SDL_Rect *a, const SDL_Rect *b) {
@@ -60,14 +61,19 @@ void render_nonregistered_captions_with_indicators(const AppContext *context) {
 
     auto[juror, text] = context->caption_model->get_current_text();
     if ( text.empty() ) return;
-
+    auto top_y = filtered_pitch(context->azimuth_mutex);
     auto left_x = filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
 
-//    auto left_x = exponential_filtered_azimuth(context->azimuth_buffer, context->azimuth_mutex);
-    if (pixel_buffer.size() == MA) pixel_buffer.pop_front();
     auto adjusted_x = pixel_mapped(left_x, context);
-    pixel_buffer.push_back(adjusted_x);
-    adjusted_x = std::accumulate(pixel_buffer.begin(), pixel_buffer.end(), 0.0) / pixel_buffer.size();
+    auto adjusted_y = pixel_mapped_y(top_y, context);
+
+    if (pixel_buffer_x.size() == MA) pixel_buffer_x.pop_front();
+    if (pixel_buffer_y.size() ==MA) pixel_buffer_y.pop_front();
+    pixel_buffer_x.push_back(adjusted_x);
+    pixel_buffer_y.push_back(adjusted_y);
+    adjusted_x = std::accumulate(pixel_buffer_x.begin(), pixel_buffer_x.end(), 0.0) / pixel_buffer_x.size();
+    adjusted_y = std::accumulate(pixel_buffer_y.begin(),pixel_buffer_y.end(),0.0) / pixel_buffer_y.size();
+
     const auto[text_width, text_height] =
     render_text(context->renderer,
                 context->medium_font,
@@ -81,13 +87,13 @@ void render_nonregistered_captions_with_indicators(const AppContext *context) {
     bool should_show_back_arrow = false;
     const auto[left, right] = context->juror_intervals->at(juror);
 
-
     if ((adjusted_x + text_width / 2) < left) {
         should_show_forward_arrow = true;
     } else if ((adjusted_x + text_width / 2) > right) {
         should_show_back_arrow = true;
     }
     int arrow_x = adjusted_x;
+    int arrow_y = adjusted_y;
     SDL_Surface *arrow_surface = nullptr;
     if (should_show_back_arrow) {
         arrow_surface = context->back_arrow;

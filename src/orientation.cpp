@@ -30,12 +30,35 @@ double get_average_of(std::deque<float> *azimuth_buffer, std::mutex *azimuth_mut
     return sum / n;
 }
 
+
+double pixel_mapped_y(double angle, const AppContext *context)
+{
+    if (!bounds_recorded)
+    {
+        theta_left = context->left_bound;
+        theta_right = context->right_bound;
+        theta_top = context->top_bound;
+        theta_bottom = context->bottom_bound;
+        bounds_recorded = true;
+    }
+
+    int pixel = ( 2160 / ( theta_bottom - theta_top ) ) * ( angle - theta_top );
+    int avg_pixel = ( 3840 / ( theta_bottom - theta_top ) ) * (get_average_of(context->azimuth_buffer, context->azimuth_mutex) - theta_top );
+
+    if (abs(pixel - avg_pixel) > PIXEL_JIGGLE_THRESHOLD)
+    {
+        return pixel;
+    }
+    else
+    {
+        return avg_pixel;
+    }
+
+    return pixel;
+}
+
 double pixel_mapped(double angle, const AppContext *context)
 {
-    //previous pixel, check if current pixel is greater then previous pixel + moving_limiter
-    //if true, then we return new pixel, else we return old pixel
-    // TODO: stop "jiggle" by not changing the pixel, unless the angle has changed a certain ammount
-
     if (!bounds_recorded)
     {
         theta_left = context->left_bound;
