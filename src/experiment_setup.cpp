@@ -80,7 +80,7 @@ SDL_Color color_string_to_color(const std::string &color_str) {
     return result;
 }
 
-std::tuple<int, int, int, SDL_Color, SDL_Color, std::string>
+std::tuple<int, int, int, SDL_Color, SDL_Color, std::string, int>
 parse_arguments(int argc, char *argv[]) {
     int video_section;
     int presentation_method;
@@ -88,6 +88,7 @@ parse_arguments(int argc, char *argv[]) {
     SDL_Color foreground_color{0, 0, 0, 0};
     SDL_Color background_color{0, 0, 0, 0};
     std::string path_to_font;
+    int fovPick;
     int font_size;
     int cmd_opt;
     int option_index = 0;
@@ -130,10 +131,44 @@ parse_arguments(int argc, char *argv[]) {
                 path_to_font = std::string(optarg);
                 break;
             case '?':
+            case 's':
+                fovPick = (int) std::stoi(optarg);
             default:
                 std::cerr << "Unknown option received: " << cmd_opt << std::endl;
         }
-        cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:", long_options, &option_index);
+        cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:s:", long_options, &option_index);
     }
-    return std::make_tuple(video_section, presentation_method, half_fov, foreground_color, background_color, path_to_font);
+    return std::make_tuple(video_section, presentation_method, half_fov, foreground_color, background_color, path_to_font, fovPick);
+}
+
+int sendFOV(int argc, char *argv[]) {
+    int pick;
+    int fovPick;
+    int option_index = 0;
+    int cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:", long_options, &option_index);
+    while (cmd_opt) {
+        if (cmd_opt == -1) {
+            break;
+        }
+        if (cmd_opt == 's'){
+            fovPick = (int) std::stoi(optarg);
+        }
+    }
+    switch (fovPick) {
+        case 25:
+            pick = 1; //todo add real numbers
+            break;
+        case 30:
+            pick = 2;
+            break;
+        case 35:
+            pick = 3;
+            break;
+        case 20:
+            pick = 4;
+            break;
+        default:
+            std::cerr << "Choose FOV: 20, 25, 30, 35 " << std::endl;
+    }
+    return pick;
 }
