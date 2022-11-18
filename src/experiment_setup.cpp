@@ -178,34 +178,3 @@ int fov_angle_to_box_pixel_width(int angle) {
     }
 }
 
-int sendFOV(int argc, char *argv[]) {
-    int pick;
-    int fovPick;
-    int option_index = 0;
-    int cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:", long_options, &option_index);
-    while (cmd_opt) {
-        if (cmd_opt == -1) {
-            break;
-        }
-        if (cmd_opt == 's'){
-            fovPick = (int) std::stoi(optarg);
-        }
-    }
-    switch (fovPick) {
-        case 25:
-            pick = 1; //todo add real numbers
-            break;
-        case 30:
-            pick = 2;
-            break;
-        case 35:
-            pick = 3;
-            break;
-        case 20:
-            pick = 4;
-            break;
-        default:
-            std::cerr << "Choose FOV: 15, 20, 25, 30 " << std::endl;
-    }
-    return pick;
-}
