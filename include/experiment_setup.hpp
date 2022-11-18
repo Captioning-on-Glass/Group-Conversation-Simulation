@@ -31,7 +31,11 @@ static struct option long_options[] = {
         {"path_to_font",        required_argument, nullptr, 'p'},
 };
 
-std::tuple<int, int, int, SDL_Color, SDL_Color, std::string, int>
+std::tuple<int, int, int, SDL_Color, SDL_Color, std::string, int, int, int>
 parse_arguments(int argc, char *argv[]);
+
+
+int fov_angle_to_num_chars(int angle);
+int fov_angle_to_box_pixel_width(int angle);
 
 #endif //COG_GROUP_CONVO_CPP_EXPERIMENT_SETUP_HPP

@@ -39,5 +39,8 @@ struct AppContext {
     float right_bound;
     float top_bound;
     float bottom_bound;
+    int fov_angle; // NEW LAIRD
+    int num_chars; // NEW LAIRD
+    int box_pixel_width; // NEW LAIRD
 };
 #endif //COG_GROUP_CONVO_CPP_APPCONTEXT_HPP

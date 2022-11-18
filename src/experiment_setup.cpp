@@ -80,7 +80,7 @@ SDL_Color color_string_to_color(const std::string &color_str) {
     return result;
 }
 
-std::tuple<int, int, int, SDL_Color, SDL_Color, std::string, int>
+std::tuple<int, int, int, SDL_Color, SDL_Color, std::string, int, int, int>
 parse_arguments(int argc, char *argv[]) {
     int video_section;
     int presentation_method;
@@ -89,12 +89,14 @@ parse_arguments(int argc, char *argv[]) {
     SDL_Color background_color{0, 0, 0, 0};
     std::string path_to_font;
     int fovPick;
+    int num_chars;
     int font_size;
+    int box_pixel_width;
     int cmd_opt;
     int option_index = 0;
     std::string fg_color_str;
     std::string bg_color_str;
-    cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:", long_options, &option_index);
+    cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:s:", long_options, &option_index);
     while (cmd_opt) {
         if (cmd_opt == -1) {
             break;
@@ -133,12 +135,47 @@ parse_arguments(int argc, char *argv[]) {
             case '?':
             case 's':
                 fovPick = (int) std::stoi(optarg);
+                num_chars = fov_angle_to_num_chars(fovPick);
+                box_pixel_width = fov_angle_to_box_pixel_width(fovPick);
+                printf("FOV is %i\n", fovPick);
             default:
                 std::cerr << "Unknown option received: " << cmd_opt << std::endl;
         }
         cmd_opt = getopt_long(argc, argv, "v:m:a:f:b:p:s:", long_options, &option_index);
     }
-    return std::make_tuple(video_section, presentation_method, half_fov, foreground_color, background_color, path_to_font, fovPick);
+    return std::make_tuple(video_section, presentation_method, half_fov, foreground_color, background_color, path_to_font, fovPick, num_chars, box_pixel_width);
+}
+
+int fov_angle_to_num_chars(int angle) {
+    // todo future work ... do the actual calculation here
+
+    switch(angle) {
+        case 15:
+            return 29;
+        case 20:
+            return 39;
+        case 25:
+            return 49;
+        case 30:
+            return 60;
+        default:
+            std::cerr << "Choose FOV: 15, 20, 25, 30 " << std::endl;
+    }
+}
+
+int fov_angle_to_box_pixel_width(int angle) {
+    switch(angle) {
+        case 15:
+            return 502;
+        case 20:
+            return 673;
+        case 25:
+            return 846;
+        case 30:
+            return 1023;
+        default:
+            std::cerr << "Choose FOV: 15, 20, 25, 30 " << std::endl;
+    }
 }
 
 int sendFOV(int argc, char *argv[]) {
@@ -168,7 +205,7 @@ int sendFOV(int argc, char *argv[]) {
             pick = 4;
             break;
         default:
-            std::cerr << "Choose FOV: 20, 25, 30, 35 " << std::endl;
+            std::cerr << "Choose FOV: 15, 20, 25, 30 " << std::endl;
     }
     return pick;
 }
