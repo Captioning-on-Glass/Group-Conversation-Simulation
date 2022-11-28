@@ -136,6 +136,36 @@ SDL_Texture* load_texture(std::string path, void *data)
     return newTexture;
 }
 
+void render_text(SDL_Renderer *renderer,
+                 TTF_Font *font,
+                 const std::string &text,
+                 int x,
+                 int y,
+                 const SDL_Color foreground_color,
+                 const SDL_Color background_color,
+                 bool center)
+{
+
+    auto text_surface = TTF_RenderText_Shaded_Wrapped(font,
+                                                      text.c_str(),
+                                                      foreground_color,
+                                                      background_color,
+                                                      0);//old 640
+    int x_pos = x;
+    int y_pos = y;
+
+    int w = text_surface->w;
+    int h = text_surface->h;
+    if (center)
+    {
+        x_pos = SCREEN_PIXEL_WIDTH / 2  + w / 2;
+        y_pos = SCREEN_PIXEL_HEIGHT / 2 + h / 2;
+    }
+    auto destination_rect = SDL_Rect{x_pos, y_pos, w, h};
+    render_surface_as_texture(renderer, text_surface, nullptr, &destination_rect);
+    SDL_FreeSurface(text_surface);
+}
+
 int main(int argc, char *argv[]) {
     // Get command-line arguments, which will be used for configuring how captions are rendered.
     const auto
@@ -378,7 +408,6 @@ int main(int argc, char *argv[]) {
     SDL_RenderPresent(app_context.renderer);
     while (!done) {
         action = 0;
-
         // Keys: enter (fullscreen), space (pause), escape (quit).
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
@@ -433,44 +462,11 @@ int main(int argc, char *argv[]) {
                     SDL_RenderPresent(app_context.renderer);
                     calibrating_right = true;
                 }
-                else if (!calibrating_top)
-                {
-                    app_context.right_bound = filtered_azimuth(app_context.azimuth_buffer,
-                                                       app_context.azimuth_mutex);
-                    SDL_RenderClear(app_context.renderer);
-                    SDL_Texture *new_texture =
-                            load_texture("resources/images/calibration_background_top.png",
-                                         &app_context);
-                    SDL_RenderCopy(app_context.renderer,
-                                   new_texture,
-                                   nullptr,
-                                   nullptr);
-                    SDL_RenderPresent(app_context.renderer);
-                    calibrating_top = true;
-                }
-                else if (!calibrating_bottom)
-                {
-                    app_context.top_bound = filtered_pitch(app_context.azimuth_mutex);
-                    SDL_RenderClear(app_context.renderer);
-                    SDL_Texture *new_texture =
-                            load_texture("resources/images/calibration_background_bottom.png",
-                                         &app_context);
-                    SDL_RenderCopy(app_context.renderer,
-                                   new_texture,
-                                   nullptr,
-                                   nullptr);
-                    SDL_RenderPresent(app_context.renderer);
-                    calibrating_bottom = true;
-                }
                 else if (!started)
                 {
-                app_context.bottom_bound = filtered_pitch(app_context.azimuth_mutex);
+                app_context.right_bound = filtered_azimuth(app_context.azimuth_buffer,
+                                                               app_context.azimuth_mutex);
                 started = true;
-                printf("Right Bound: %f \n Left Bound: %f \n Top Bound: %f \n Bottom Bound: %f \n",
-                       app_context.right_bound,
-                       app_context.left_bound,
-                       app_context.top_bound,
-                       app_context.bottom_bound);
                 libvlc_media_player_play(mp);
                 }
                 break;
