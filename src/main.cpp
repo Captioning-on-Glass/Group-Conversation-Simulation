@@ -145,7 +145,10 @@ int main(int argc, char *argv[]) {
     half_fov, // What is the user's half field of view?
     foreground_color, // What color will the text be? RGBA format
     background_color, // What color will the background behind the text be? RGBA format
-    path_to_font // Where's the smallest_font located?
+    path_to_font, // Where's the smallest_font located?
+    fovPick, //what fov is chosen?
+    num_chars,
+    box_pixel_width
     ] = parse_arguments(argc, argv);
 
     std::cout << "Using presentation method: " << presentation_method << std::endl;
@@ -174,6 +177,10 @@ int main(int argc, char *argv[]) {
     app_context.half_fov = half_fov;
     app_context.window_width = SCREEN_PIXEL_WIDTH;
     app_context.window_height = SCREEN_PIXEL_HEIGHT;
+
+    app_context.fov_angle = fovPick; // TODO NEW
+    app_context.num_chars = num_chars; // TODO NEW
+    app_context.box_pixel_width = box_pixel_width; // TODO NEW
 
     const auto juror_a_l = juror_positions.at(cog::Juror_JurorA).first * app_context.window_width;
     const auto juror_a_r = juror_a_l + 300.f;
@@ -358,6 +365,14 @@ int main(int argc, char *argv[]) {
              &json,
              &caption_model,
              presentation_method);
+
+//    SDL_Texture* new_texture =
+//            load_texture("resources/images/QR.png",
+//                         &app_context);
+//    SDL_RenderCopy(app_context.renderer,
+//                   new_texture,
+//                   nullptr,
+//                   nullptr);
 
     SDL_RenderPresent(app_context.renderer);
     while (!done) {
