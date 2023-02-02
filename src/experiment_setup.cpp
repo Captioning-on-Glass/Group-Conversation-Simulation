@@ -8,10 +8,10 @@
 
 /**
  * Prints a QR code to the console. The QR code's contents are formatted as follows:
- * "<MACHINE_IP_ADDR>:<PORT> <PRESENTATION_METHOD>"
+ * "<MACHINE_IP_ADDR>:<PORT>"
  * @param presentation_method
  */
-void print_connection_qr(int presentation_method, int port) {
+void print_connection_qr(int port) {
     struct ifaddrs *ifap, *ifa;
     struct sockaddr_in *sa;
     char *addr;
@@ -26,7 +26,7 @@ void print_connection_qr(int presentation_method, int port) {
                 std::ostringstream command;
                 std::string address = std::string(addr);
                 std::string address_port = address + ":" + std::to_string(port);
-                command << "qrencode -t ANSI \"" << addr << ":" << port << " " << presentation_method << "\"";
+                command << "qrencode -t ANSI \"" << addr << ":" << port <<"\"";
                 std::cout << "Command is: " << command.str() << std::endl;
                 system(command.str().c_str());
                 break;

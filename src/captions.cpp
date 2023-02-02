@@ -69,22 +69,6 @@ cog::Juror juror_from_string(const std::string &juror_str) {
     return juror;
 }
 
-void transmit_caption(int socket, sockaddr_in *client_address, const std::string &text, cog::Juror speaker_id,
-                      cog::Juror focused_id, int message_id, int chunk_id) {
-    flatbuffers::FlatBufferBuilder builder(1024);
-    auto caption_message = cog::CreateCaptionMessageDirect(builder, text.c_str(), speaker_id, focused_id, message_id,
-                                                           chunk_id);
-    builder.Finish(caption_message);
-    uint8_t *buffer = builder.GetBufferPointer();
-    const auto size = builder.GetSize();
-    socklen_t len = sizeof(*client_address);
-
-    if (sendto(socket, buffer, size, 0, (struct sockaddr *) &(*client_address),
-               len) < 0) {
-        std::cerr << "sendto failed: " << strerror(errno) << std::endl;
-    }
-    std::cout << text << std::endl;
-}
 
 
 void
@@ -104,10 +88,12 @@ start_caption_stream(const bool *started, int socket, sockaddr_in *client_addres
         auto message_id = caption_json->at(i)["message_id"].get<int>();
         auto chunk_id = caption_json->at(i)["chunk_id"].get<int>();
         auto focused_id = cog::Juror_JuryForeman;
-        if (presentation_method == 4) {
-            transmit_caption(socket, client_address, text, speaker_id, focused_id, message_id, chunk_id);
-        }
+
         std::this_thread::sleep_for(std::chrono::duration<double, std::ratio<1, 1000>>(delay));
         model->add_word(text, speaker_id);
+
+
     }
+
+    
 }

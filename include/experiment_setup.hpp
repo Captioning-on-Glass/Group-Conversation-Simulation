@@ -12,10 +12,10 @@
 
 /**
  * Prints a QR code to the console. The QR code's contents are formatted as follows:
- * "<MACHINE_IP_ADDR>:<PORT> <PRESENTATION_METHOD>"
+ * "<MACHINE_IP_ADDR>:<PORT>"
  * @param presentation_method
  */
-void print_connection_qr(int presentation_method, int port);
+void print_connection_qr(int port);
 
 std::tuple<int, sockaddr_in> connect_to_client(int port);
 

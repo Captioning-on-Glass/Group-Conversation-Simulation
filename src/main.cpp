@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
 
     // Print the address of this server, and which presentation method we're going to be using.
     // This QR code will be scanned by the HWD so that it can connect to our server.
-    print_connection_qr(presentation_method, PORT);
+    print_connection_qr(PORT);
     // Now, wait for the connection.
     auto[socket, cliaddr] = connect_to_client(PORT);
 
