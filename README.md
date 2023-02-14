@@ -77,7 +77,7 @@ recommended development tool for this repository.
 should make getting CLion a cinch.
 
 
-##Implementation
+## Implementation
 This program connects to smartglasses to provide captions for a video which move with the viewer's head position.
 
 First the C++ program connects to the companion Android app on the smartglasses by printing a QR code containing a port for the Android app to scan and connect to over Wireless.  It then opens a socket to listen to the port.  Over wireless the Android app will send the smartglasses' sensor position information to the C++ program.
