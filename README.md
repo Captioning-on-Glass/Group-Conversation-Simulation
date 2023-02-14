@@ -75,3 +75,15 @@ Most development of this repository has been done using [CLion](https://www.jetb
 recommended development tool for this repository.
 [JetBrains offers free educational licenses to students](https://www.jetbrains.com/community/education/#students), which
 should make getting CLion a cinch.
+
+
+##Implementation
+This program connects to smartglasses to provide captions for a video which move with the viewer's head position.
+
+First the C++ program connects to the companion Android app on the smartglasses by printing a QR code containing a port for the Android app to scan and connect to over Wireless.  It then opens a socket to listen to the port.  Over wireless the Android app will send the smartglasses' sensor position information to the C++ program.
+
+Next we initialize the SDL(Simple Direct Media Layer) and its extensions SDL_ttf and SDL_image, load our fonts and window where we will be streaming video, and prepare it for video streaming.  The video is streamed with captions as well as arrows pointing to where the current speaker is on the screen(ie. if you are looking to the right and the person speaking is to the left, an arrow will point to the left in your field of view).  
+
+Before the video plays, the app has to be calibrated with the sensors' values on the headworn display.  So, the user is asked to look to the left of the screen, and then look to the right of the screen, in order to get the difference in sensor values that represents a full range of motion looking across the screen.  Finally, we play the video to completion and have another thread to programatically generate and render the captions on the video, positioning them according to the sensor values.
+
+We then initialize the VLC video player 
